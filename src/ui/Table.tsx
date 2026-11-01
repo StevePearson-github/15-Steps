@@ -5,6 +5,7 @@ import {
 } from '../engine';
 import { CardView } from './CardView';
 import { ContextMenu } from './ContextMenu';
+import { SoundControls, type SoundProps } from './SoundControls';
 import { Hand, type HandHandle } from './Hand';
 import { fitToWindow, resetFit } from './fit';
 import { type Snapshot, captureCards, getMotionScale, motionAvailable, playMotion } from './motion';
@@ -18,6 +19,7 @@ interface TableProps {
   /** Perform a human action. Returns an error message, or null on success. */
   onAction: (action: Action) => string | null;
   onNewGame: () => void;
+  sound?: SoundProps;
   /** Take back your last play this turn. */
   onUndo?: () => void;
   /** Controls for watching computers play (only used when there is no human seat). */
@@ -38,7 +40,7 @@ interface Choice {
   apply: (spec: MeldSpec) => void;
 }
 
-export function Table({ session, onAction, onNewGame, onUndo, watch, speed }: TableProps) {
+export function Table({ session, onAction, onNewGame, onUndo, watch, speed, sound }: TableProps) {
   const { state, seats, log } = session;
   const me = humanSeat(session);
   const player = me >= 0 ? state.players[me] : undefined;
@@ -580,6 +582,7 @@ export function Table({ session, onAction, onNewGame, onUndo, watch, speed }: Ta
                 <span className="hint">Cards glide, fly and flip into place.</span>
               </span>
             </label>
+            {sound && <SoundControls {...sound} />}
             <button type="button" className="primary" onClick={() => setShowOptions(false)}>Close</button>
           </div>
         </div>

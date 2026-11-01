@@ -140,7 +140,7 @@ None at this time.
 
 **Phase 1, rules engine:** done (`src/engine`).
 **Phase 2, AI players and simulation:** done (`src/ai`, `src/sim`).
-**Phase 3, minimal playable UI:** done (`src/ui`). Themes, sound/music and animation are still to do.
+**Phase 3, minimal playable UI:** done (`src/ui`). Sound and music are done (see below); themes are still to do.
 
 Run `npm run dev` to play in the browser (`npm run build` makes a static build in `dist/`). Run `npm test` (386 tests, about 4 seconds) and `npm run typecheck`. Run `npm run sim -- 100` to play 100 AI-vs-AI games and print win rates.
 
@@ -177,7 +177,8 @@ A Vite + React + TypeScript web app, 2D, playable in any modern browser.
 - **Watching computers play (no human seat):** every computer's cards are shown face-up (a switch hides them), so you can follow their plans. A bar at the top has **Pause/Resume**, **Step** (plays one move while paused), and **Stop game** (also "Stop watching" at the top right) which returns to the setup screen. When a round ends, a banner shows the penalties instead of a pop-up, so the cards stay visible, and the next round starts by itself unless paused. Cards are only ever revealed when nobody is playing; in a game you play, opponents' cards stay hidden.
 - **Saving:** the game autosaves to the browser after every move and can be resumed from the setup screen.
 - **Structure:** `controller.ts` holds all the logic (seats, AI stepping, turning selections into actions, saving) and has no React in it. The components only display it. CSS colours and card sizes are variables (`--card-bg`, `--felt`, `--card-w` and so on), ready for deck themes. Cards are 116×164 px (80×112 for melds on the table), and the text, suit and rounding all scale from the card width, so changing `--card-w` resizes everything. They step down on narrower screens (84 px under 900 px wide, 56 px under 600 px). A hand of 14 cards wraps to two rows on a laptop screen.
-- **Not yet:** deck themes, sound and music, animation, and online multiplayer.
+- **Sound and music:** synthesised with Web Audio (`src/ui/audio.ts`, no audio files). Effects follow engine events (`Session.events`, transient, never saved); music is a generative loop. Separate on/off and volume for each, in Options and on the setup screen, saved to `localStorage` (`15steps.sound.v1`). Audio starts on the first click or key press (browser rule).
+- **Not yet:** deck themes, animation polish, and online multiplayer.
 
 ### Lessons from simulation and play
 
