@@ -3,8 +3,9 @@ import type { Player } from '../ai/player';
 import type { Action } from '../engine';
 import { Setup } from './Setup';
 import { Table } from './Table';
+import { setMotionScale } from './motion';
 import {
-  SESSION_SAVE_KEY, type Session, type SetupOptions, aiStep, apply, createSession,
+  SESSION_SAVE_KEY, SPEED_FACTORS, loadSpeed, saveSpeed, speedLabel, type Session, type SetupOptions, aiStep, apply, createSession,
   deserializeSession, humanSeat, makePlayers, serializeSession, undo,
 } from './controller';
 
@@ -33,6 +34,10 @@ export function App({ aiDelayMs = 700 }: { aiDelayMs?: number }) {
   const saved = useMemo(loadSaved, []);
   // Watching only: hold the computers still so you can study the table.
   const [paused, setPaused] = useState(false);
+  // Watching: how fast the computers play (and how fast the cards fly), changed with the arrows beside Pause.
+  const [speed, setSpeed] = useState(() => loadSpeed());
+  const factor = SPEED_FACTORS[speed] ?? 1;
+  useEffect(() => { setMotionScale(factor); saveSpeed(speed); }, [speed, factor]);
 
   const start = (opts: SetupOptions) => {
     const s = createSession(opts);
@@ -69,14 +74,14 @@ export function App({ aiDelayMs = 700 }: { aiDelayMs?: number }) {
     const watching = humanSeat(session) < 0;
     let delay: number | null = null;
     if (state.phase === 'roundOver') {
-      if (watching) delay = Math.max(aiDelayMs * 3, 0);
+      if (watching) delay = Math.max(aiDelayMs * factor * 3, 0);
     } else if (seats[state.current]?.kind !== 'human') {
-      delay = aiDelayMs;
+      delay = aiDelayMs * factor;
     }
     if (delay === null) return;
     const timer = setTimeout(advance, delay);
     return () => clearTimeout(timer);
-  }, [session, aiDelayMs, paused]);
+  }, [session, aiDelayMs, paused, factor]);
 
   if (!session) return <Setup onStart={start} {...(saved ? { onContinue: resume } : {})} />;
 
@@ -96,7 +101,18 @@ export function App({ aiDelayMs = 700 }: { aiDelayMs?: number }) {
         setSession(null);
       }}
       onUndo={() => setSession((s) => (s ? undo(s) : s))}
-      watch={{ paused, onTogglePause: () => setPaused((p) => !p), onStep: advance }}
+      speed={{
+        label: speedLabel(speed),
+        canSlower: speed > 0,
+        canFaster: speed < SPEED_FACTORS.length - 1,
+        onSlower: () => setSpeed((s) => Math.max(0, s - 1)),
+        onFaster: () => setSpeed((s) => Math.min(SPEED_FACTORS.length - 1, s + 1)),
+      }}
+      watch={{
+        paused,
+        onTogglePause: () => setPaused((p) => !p),
+        onStep: advance,
+      }}
     />
   );
 }

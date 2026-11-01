@@ -7,7 +7,7 @@ import { CardView } from './CardView';
 import { ContextMenu } from './ContextMenu';
 import { Hand, type HandHandle } from './Hand';
 import { fitToWindow, resetFit } from './fit';
-import { type Snapshot, captureCards, motionAvailable, playMotion } from './motion';
+import { type Snapshot, captureCards, getMotionScale, motionAvailable, playMotion } from './motion';
 import {
   AVATARS, SORTERS, loadUiOptions, saveUiOptions, sortHandSmart, type Session, type SortDir, type SortKey, arrangeHand, baseFromSelection, canUndo,
   describeSpec, describeStep, humanSeat, seatColor, meldOptions, moveCards, orderForBuild, stagedMeetBase, stepKinds, verb,
@@ -22,6 +22,8 @@ interface TableProps {
   onUndo?: () => void;
   /** Controls for watching computers play (only used when there is no human seat). */
   watch?: { paused: boolean; onTogglePause: () => void; onStep: () => void };
+  /** The speed arrows, always on screen: how fast the computers play and the cards fly. */
+  speed?: { label: string; canSlower: boolean; canFaster: boolean; onSlower: () => void; onFaster: () => void };
 }
 
 /** Things that are not "empty board": anything you can press, plus cards, melds, the hand and pop-ups. */
@@ -36,7 +38,7 @@ interface Choice {
   apply: (spec: MeldSpec) => void;
 }
 
-export function Table({ session, onAction, onNewGame, onUndo, watch }: TableProps) {
+export function Table({ session, onAction, onNewGame, onUndo, watch, speed }: TableProps) {
   const { state, seats, log } = session;
   const me = humanSeat(session);
   const player = me >= 0 ? state.players[me] : undefined;
@@ -81,6 +83,40 @@ export function Table({ session, onAction, onNewGame, onUndo, watch }: TableProp
   const playerOrder = watching
     ? state.players.map((_, i) => i)
     : Array.from({ length: state.players.length - 1 }, (_, k) => (me + 1 + k) % state.players.length);
+  // Carousel: with several opponents, the one whose turn it is (or who just played, when it is your turn) is shown large in the middle,
+  // with the others smaller to the left and right in turn order. Clicking a smaller one brings it to the middle until the turn moves on.
+  const carousel = playerOrder.length >= 2;
+  const [pinned, setPinned] = useState<number | null>(null);
+  useEffect(() => setPinned(null), [state.current]);
+  const natural = playerOrder.includes(state.current) ? state.current : (playerOrder[playerOrder.length - 1] as number);
+  const focus = pinned !== null && playerOrder.includes(pinned) ? pinned : natural;
+  const shown = (() => {
+    if (!carousel) return playerOrder;
+    const k = playerOrder.indexOf(focus);
+    const mid = Math.floor(playerOrder.length / 2);
+    return playerOrder.map((_, j) => playerOrder[(k - mid + j + playerOrder.length * 2) % playerOrder.length] as number);
+  })();
+  // When the carousel turns, each window slides from where it was to where it is now.
+  const oppRects = useRef(new Map<string, DOMRect>());
+  useLayoutEffect(() => {
+    const els = Array.from(rootRef.current?.querySelectorAll<HTMLElement>('.opponents[data-carousel] .opponent') ?? []);
+    const scale = getMotionScale();
+    const next = new Map<string, DOMRect>();
+    for (const el of els) {
+      // Measure where each window really is, not where an unfinished slide has it.
+      if (typeof el.getAnimations === 'function') for (const a of el.getAnimations()) if (a.id === 'carousel') a.cancel();
+      const key = el.dataset.seat ?? '';
+      const rect = el.getBoundingClientRect();
+      next.set(key, rect);
+      const prev = oppRects.current.get(key);
+      // At the fastest speeds the turns come quicker than a slide takes, so the windows just jump.
+      if (options.animations && scale >= 0.5 && prev && Math.abs(prev.left - rect.left) > 2 && typeof el.animate === 'function') {
+        const a = el.animate([{ transform: `translateX(${prev.left - rect.left}px)` }, { transform: 'translateX(0)' }], { duration: Math.round(380 * scale), easing: 'ease-in-out' });
+        a.id = 'carousel';
+      }
+    }
+    oppRects.current = next;
+  }, [focus, shown.join(','), options.animations]);
   // A press that starts and ends on empty board, without moving, clears the selection.
   const emptyPress = useRef<{ x: number; y: number } | null>(null);
   const handRef = useRef<HandHandle>(null);
@@ -269,8 +305,31 @@ export function Table({ session, onAction, onNewGame, onUndo, watch }: TableProp
           </ul>
           <span className="sb-note">Lowest score wins</span>
         </div>
+        {(state.phase === 'gameOver' || (watching && watch?.paused)) && <div className="status-pill" aria-live="polite">{turnText}</div>}
+    {watching && watch && (
+      <section className="watch-bar" aria-label="Watching controls">
+        <button type="button" className="primary" onClick={watch.onTogglePause} aria-pressed={watch.paused}>
+          {watch.paused ? '▶ Resume' : '❚❚ Pause'}
+        </button>
+        <button type="button" onClick={watch.onStep} disabled={!watch.paused || state.phase === 'gameOver'} title="Play one move">
+          Step
+        </button>
+        <label>
+          <input type="checkbox" checked={showCards} onChange={(e) => setShowCards(e.target.checked)} /> Show the computers’ cards
+        </label>
+        <button type="button" onClick={onNewGame}>Stop game</button>
+      </section>
+    )}
         <div className="topbar-right">
           <div className="topbar-buttons">
+            {speed && (
+              <span className="speed" role="group" aria-label="Speed" title="How fast the computers play">
+                <span className="speed-title">Speed</span>
+                <button type="button" className="arrow" aria-label="Slower" title="Slower" disabled={!speed.canSlower} onClick={speed.onSlower}>◀</button>
+                <span className="speed-label" aria-live="polite">{speed.label}</span>
+                <button type="button" className="arrow" aria-label="Faster" title="Faster" disabled={!speed.canFaster} onClick={speed.onFaster}>▶</button>
+              </span>
+            )}
             <button type="button" onClick={() => setShowOptions(true)}>Options</button>
             <button type="button" onClick={() => setShowSteps(true)}>15 steps</button>
             <button type="button" className="danger" onClick={onNewGame}>{watching ? 'Stop watching' : 'New game'}</button>
@@ -278,28 +337,14 @@ export function Table({ session, onAction, onNewGame, onUndo, watch }: TableProp
         </div>
       </header>
 
-      {watching && watch && (
-        <section className="watch-bar" aria-label="Watching controls">
-          <button type="button" className="primary" onClick={watch.onTogglePause} aria-pressed={watch.paused}>
-            {watch.paused ? '▶ Resume' : '❚❚ Pause'}
-          </button>
-          <button type="button" onClick={watch.onStep} disabled={!watch.paused || state.phase === 'gameOver'} title="Play one move">
-            Step
-          </button>
-          <label>
-            <input type="checkbox" checked={showCards} onChange={(e) => setShowCards(e.target.checked)} /> Show the computers’ cards
-          </label>
-          <button type="button" onClick={onNewGame}>Stop game</button>
-        </section>
-      )}
-
-      <section className="opponents" aria-label="Players" data-count={watching && showCards ? undefined : state.players.length - (me >= 0 ? 1 : 0)}>
-        {playerOrder.map((i) => {
+      <section className="opponents" aria-label="Players" data-count={Math.min(playerOrder.length, 5)} data-carousel={carousel ? 1 : undefined}>
+        {shown.map((i) => {
           const p = state.players[i];
           if (!p) return null;
           const active = playing && state.current === i;
           return (
-            <div key={i} data-seat={i} className={`opponent${active ? ' active' : ''}`} aria-current={active ? 'true' : undefined}>
+            <div key={i} data-seat={i} className={`opponent${active ? ' active' : ''}${carousel ? (i === focus ? ' focus' : ' side') : ''}`} aria-current={active ? 'true' : undefined}
+              onClick={carousel && i !== focus ? () => setPinned(i) : undefined}>
               <div className="opp-bar">
                 <span className="pill tab name">
                   <span className="dot" style={{ background: seatColor(i) }} />
@@ -312,7 +357,7 @@ export function Table({ session, onAction, onNewGame, onUndo, watch }: TableProp
                 </span>
               </div>
               <div className="opp-desc" title={describeStep(p.step)}>{describeStep(p.step)}</div>
-              {watching && showCards ? (
+              {watching && showCards && (!carousel || i === focus) ? (
                 <div className="reveal-hand" data-region={`reveal-${i}`} aria-label={`${seats[i]?.name}'s cards`}>
                   {arrangeHand(p.hand, []).map((c) => <CardView key={c.id} card={c} small />)}
                 </div>
@@ -398,68 +443,6 @@ export function Table({ session, onAction, onNewGame, onUndo, watch }: TableProp
         </div>
       </section>
       <div className="bottom">
-        <div className="status-pill" aria-live="polite">{turnText}</div>
-      {player && (
-        <section className={`mine${myTurn ? ' active' : ''}`}>
-          <span className="pill tab you">
-            <span className="dot" style={{ background: seatColor(me) }} />
-            {seats[me]?.name} <span className="avatar" aria-hidden="true">{AVATARS.human}</span>
-          </span>
-          <div className="goal">
-            <span className="goal-step">
-              <strong>Step {player.step}:</strong> {describeStep(player.step)}
-              {player.baseLaid ? ' ✓ base down' : ''} · {player.score} pts
-            </span>
-            {canPlay && !player.baseLaid && (
-              <div className="staging">
-                <span>Base:</span>
-                {staged.length === 0 && <span className="hint">Select all your base cards and press “Lay down base”, or build it meld by meld with “Add as meld”.</span>}
-                {staged.map((s, i) => (
-                  <span key={i} className="staged">
-                    {describeSpec(s)}{' '}
-                    <button type="button" className="link" aria-label="remove" onClick={() => setStaged((x) => x.filter((_, j) => j !== i))}>×</button>
-                  </span>
-                ))}
-              </div>
-            )}
-            <span className="tip" title="Drag cards to arrange them, or drag on the table to select several. Right-click for more.">Drag to arrange · right-click for more</span>
-            {targets.length > 0 && (
-              <div className="add-hint" role="status">
-                {targets.length === 1 ? 'Your selected cards fit the gold meld on the table.' : `Your selected cards fit ${targets.length} gold melds on the table.`}{' '}
-                Click a gold meld, or press its add button, to play them there.
-              </div>
-            )}
-          </div>
-          <Hand ref={handRef} cards={hand} selected={selected} canSelect onToggle={toggle} onSelect={setSelected} onMove={move} />
-          <div className="sort-row">
-            <button type="button" className={`sort-btn smart${lastSort?.key === 'smart' ? ' on' : ''}`} onClick={smartSort}>Smart sort</button>
-            <button type="button" className={`sort-btn${lastSort?.key === 'suit' ? ' on' : ''}`} onClick={() => sortLink('suit')}>Sort by suit{arrow('suit')}</button>
-            <button type="button" className={`sort-btn${lastSort?.key === 'rank' ? ' on' : ''}`} onClick={() => sortLink('rank')}>Sort by rank{arrow('rank')}</button>
-            <button type="button" className={`sort-btn${lastSort?.key === 'sets' ? ' on' : ''}`} onClick={() => sortLink('sets')}>Sort by sets{arrow('sets')}</button>
-            <button type="button" className={`sort-btn${lastSort?.key === 'runs' ? ' on' : ''}`} onClick={() => sortLink('runs')}>Sort by runs{arrow('runs')}</button>
-          </div>
-
-          {/* Always shown so they never seem to come and go; they are greyed out until it is your turn and you have drawn. */}
-          <div className="actions">
-            {!player.baseLaid ? (
-              <>
-                <button type="button" disabled={!canPlay || selectedCards.length < 2} onClick={stage}>Add as meld</button>
-                <button type="button" disabled={!canPlay} onClick={suggest}>Suggest base</button>
-                <button type="button" className="primary" disabled={!canPlay || (!baseReady && !selectionBase)} onClick={layBase}>Lay down base</button>
-              </>
-            ) : (
-              <button type="button" disabled={!canPlay || selectedCards.length < 3} onClick={layNow}>Lay down selected</button>
-            )}
-            <button type="button" disabled={!canPlay || selectedCards.length !== 1} onClick={() => run({ type: 'discard', cardId: selected[0] as string })}>
-              Discard selected
-            </button>
-            <button type="button" disabled={!canPlay || !undoable} onClick={doUndo} title="Take back your last play (Ctrl/Cmd+Z)">
-              Undo
-            </button>
-          </div>
-          {message && <p className="error" role="alert">{message}</p>}
-        </section>
-      )}
         {options.showActivity && (
         <section className={`log${logOpen ? '' : ' collapsed'}`} aria-label="Activity" aria-live="polite">
           <div className="log-head">
@@ -481,6 +464,72 @@ export function Table({ session, onAction, onNewGame, onUndo, watch }: TableProp
           </div>
         </section>
         )}
+      {player && (
+        <section className={`mine${myTurn ? ' active' : ''}`}>
+          <span className="pill tab you">
+            <span className="dot" style={{ background: seatColor(me) }} />
+            {seats[me]?.name} <span className="avatar" aria-hidden="true">{AVATARS.human}</span>
+          </span>
+          <span className="pill step-pill mine-step" title={`Step ${player.step}: ${describeStep(player.step)}`}>
+            <span className="step-text"><strong>Step {player.step}:</strong> {describeStep(player.step)}</span>
+            {player.baseLaid ? <span className="base-down" title="Base is down">✓ base down</span> : null}
+          </span>
+          <div className="goal">
+            <span className="goal-step">{player.score} pts</span>
+            {canPlay && !player.baseLaid && (
+              <div className="staging">
+                <span>Base:</span>
+                {staged.length === 0 && <span className="hint">Select all your base cards and press “Lay down base”, or build it meld by meld with “Add as meld”.</span>}
+                {staged.map((s, i) => (
+                  <span key={i} className="staged">
+                    {describeSpec(s)}{' '}
+                    <button type="button" className="link" aria-label="remove" onClick={() => setStaged((x) => x.filter((_, j) => j !== i))}>×</button>
+                  </span>
+                ))}
+              </div>
+            )}
+            {myTurn && state.phase === 'draw' && <div className="status-pill in-hand" aria-live="polite">{selected.length > 0 ? 'Draw a card first — then you can lay these down' : turnText}</div>}
+            <span className="tip" title="Drag cards to arrange them, or drag on the table to select several. Right-click for more.">Drag to arrange · right-click for more</span>
+            {targets.length > 0 && (
+              <div className="add-hint" role="status">
+                {targets.length === 1 ? 'Your selected cards fit the gold meld on the table.' : `Your selected cards fit ${targets.length} gold melds on the table.`}{' '}
+                Click a gold meld, or press its add button, to play them there.
+              </div>
+            )}
+          </div>
+          <Hand ref={handRef} cards={hand} selected={selected} canSelect onToggle={toggle} onSelect={setSelected} onMove={move} />
+          <div className="controls">
+          <div className="sort-row">
+            <span className="sort-label">Sort</span>
+            <button type="button" className={`sort-btn smart${lastSort?.key === 'smart' ? ' on' : ''}`} onClick={smartSort} aria-label="Smart sort">Smart</button>
+            <button type="button" className={`sort-btn${lastSort?.key === 'suit' ? ' on' : ''}`} onClick={() => sortLink('suit')} aria-label={`Sort by suit${arrow('suit')}`}>Suit{arrow('suit')}</button>
+            <button type="button" className={`sort-btn${lastSort?.key === 'rank' ? ' on' : ''}`} onClick={() => sortLink('rank')} aria-label={`Sort by rank${arrow('rank')}`}>Rank{arrow('rank')}</button>
+            <button type="button" className={`sort-btn${lastSort?.key === 'sets' ? ' on' : ''}`} onClick={() => sortLink('sets')} aria-label={`Sort by sets${arrow('sets')}`}>Sets{arrow('sets')}</button>
+            <button type="button" className={`sort-btn${lastSort?.key === 'runs' ? ' on' : ''}`} onClick={() => sortLink('runs')} aria-label={`Sort by runs${arrow('runs')}`}>Runs{arrow('runs')}</button>
+          </div>
+
+          {/* Always shown so they never seem to come and go; they are greyed out until it is your turn and you have drawn. */}
+          <div className="actions">
+            {!player.baseLaid ? (
+              <>
+                <button type="button" disabled={!canPlay || selectedCards.length < 2} onClick={stage}>Add as meld</button>
+                <button type="button" disabled={!canPlay} onClick={suggest}>Suggest base</button>
+                <button type="button" className="primary" disabled={!canPlay || (!baseReady && !selectionBase)} onClick={layBase}>Lay down base</button>
+              </>
+            ) : (
+              <button type="button" disabled={!canPlay || selectedCards.length < 3} onClick={layNow}>Lay down selected</button>
+            )}
+            <button type="button" disabled={!canPlay || selectedCards.length !== 1} onClick={() => run({ type: 'discard', cardId: selected[0] as string })}>
+              Discard selected
+            </button>
+            <button type="button" disabled={!canPlay || !undoable} onClick={doUndo} title="Take back your last play (Ctrl/Cmd+Z)">
+              Undo
+            </button>
+          </div>
+          </div>
+          {message && <p className="error" role="alert">{message}</p>}
+        </section>
+      )}
       </div>
 
       {menu && (

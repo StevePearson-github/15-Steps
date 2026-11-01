@@ -122,7 +122,11 @@ export interface PlayOptions {
 }
 
 const EASE_OUT = 'cubic-bezier(0.16, 1, 0.3, 1)';
-const flightMs = (dist: number) => Math.round(Math.min(560, Math.max(300, 240 + dist * 0.32)));
+/** How long animations take compared with normal (1). The watch-speed arrows change it: below 1 is faster. */
+let motionScale = 1;
+export const setMotionScale = (k: number): void => { motionScale = k > 0 ? k : 1; };
+export const getMotionScale = (): number => motionScale;
+const flightMs = (dist: number) => Math.round(Math.min(560, Math.max(300, 240 + dist * 0.32)) * motionScale);
 const ghosts = new Set<HTMLElement>();
 
 function makeGhost(from: HTMLElement, at: Rect, vars: Record<string, string>): HTMLElement {
@@ -178,7 +182,7 @@ function fly(f: Flight) {
   const b = centre(f.to);
   const dist = Math.hypot(b.x - a.x, b.y - a.y);
   const D = flightMs(dist);
-  const FLIP = f.flip ? 110 : 0;
+  const FLIP = f.flip ? Math.round(110 * motionScale) : 0;
   hideFor(f.real, f.delay + D + FLIP / 2);
   const baseRect = f.base === 'to' ? f.to : f.from;
   const g = makeGhost(f.look, baseRect, f.lookVars);
@@ -247,7 +251,7 @@ export function playMotion({ root, snap, prev, next, me }: PlayOptions): void {
 
   const glides: { el: HTMLElement; dx: number; dy: number; scale: number; dist: number; x: number }[] = [];
   let launched = 0;
-  const nextDelay = () => Math.min(launched++ * 55, 330);
+  const nextDelay = () => Math.min(launched++ * 55, 330) * motionScale;
 
   for (const c of now) {
     if (c.held) continue;
@@ -300,8 +304,8 @@ export function playMotion({ root, snap, prev, next, me }: PlayOptions): void {
   let rank = 0;
   for (const g of glides) {
     const far = g.dist >= 24;
-    const duration = far ? flightMs(g.dist) * 0.8 : 130;
-    const delay = far && rippling ? Math.min(rank++ * 24, 300) : 0;
+    const duration = far ? flightMs(g.dist) * 0.8 : 130 * motionScale;
+    const delay = far && rippling ? Math.min(rank++ * 24, 300) * motionScale : 0;
     const a = g.el.animate(
       [
         { translate: `${g.dx}px ${g.dy}px`, scale: String(g.scale) },

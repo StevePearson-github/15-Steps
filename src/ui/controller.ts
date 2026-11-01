@@ -523,3 +523,27 @@ export function deserializeSession(text: string): Session | null {
     return null;
   }
 }
+
+
+// ---- Watching speed ----
+
+/** How long a computer's move takes, as a multiple of the normal pace: bigger is slower. Index 2 is normal. */
+export const SPEED_FACTORS = [2.2, 1.5, 1, 0.65, 0.35, 0.15] as const;
+export const DEFAULT_SPEED = 2;
+/** The label shown beside the arrows: 1× is normal, 3× is three times as fast. */
+export const speedLabel = (index: number): string => {
+  const x = 1 / (SPEED_FACTORS[index] ?? 1);
+  return `${x < 1 ? x.toFixed(1) : Math.round(x * 10) / 10}×`.replace('.0×', '×');
+};
+export const SPEED_KEY = '15steps.speed.v1';
+export function loadSpeed(store: Pick<Storage, 'getItem'> | null = typeof localStorage === 'undefined' ? null : localStorage): number {
+  try {
+    const n = Number(store?.getItem(SPEED_KEY));
+    return Number.isInteger(n) && n >= 0 && n < SPEED_FACTORS.length && store?.getItem(SPEED_KEY) !== null ? n : DEFAULT_SPEED;
+  } catch {
+    return DEFAULT_SPEED;
+  }
+}
+export function saveSpeed(index: number, store: Pick<Storage, 'setItem'> | null = typeof localStorage === 'undefined' ? null : localStorage): void {
+  try { store?.setItem(SPEED_KEY, String(index)); } catch { /* not saved: the speed just resets next time */ }
+}

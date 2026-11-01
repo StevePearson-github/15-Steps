@@ -58,11 +58,21 @@ describe('starting a game', () => {
     await waitFor(() => screen.getByText(/draw a card/));
     fireEvent.click(document.querySelector('.piles .card.back') as HTMLElement);
     await waitFor(() => expect(document.querySelectorAll('.hand .card')).toHaveLength(14));
-    expect(screen.getByText(/play, then discard/)).toBeTruthy();
+    expect(document.querySelector('.status-pill')).toBeNull(); // the draw prompt goes away once you have drawn
     fireEvent.click(document.querySelector('.hand .card') as HTMLElement);
     fireEvent.click(screen.getByRole('button', { name: 'Discard selected' }));
     await waitFor(() => expect(document.querySelectorAll('.hand .card')).toHaveLength(13));
     await waitFor(() => screen.getByText(/draw a card/), { timeout: 3000 });
+  });
+
+  it('has the speed arrows on screen in a game you are playing, not only when watching', async () => {
+    vi.spyOn(Math, 'random').mockReturnValue(0.5);
+    render(<App aiDelayMs={0} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Start game' }));
+    await waitFor(() => screen.getByText(/draw a card/));
+    expect(screen.getByRole('group', { name: 'Speed' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Slower' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Faster' })).toBeTruthy();
   });
 
   it('offers to continue a saved game', async () => {
@@ -1340,12 +1350,13 @@ describe('watching the computers play', () => {
   const revealed = () => document.querySelectorAll('.opponent .reveal-hand .card');
 
   describe('seeing the cards', () => {
-    it('shows every computer’s cards face-up', () => {
+    it('shows the cards of the computer whose turn it is (in the middle of the carousel) face-up, the others face-down', () => {
       showTable(watchSession());
-      expect(revealed()).toHaveLength(7); // 4 + 3
+      expect(revealed()).toHaveLength(4); // Ada's, whose turn it is
+      expect(document.querySelectorAll('.opponent .back-card').length).toBe(3); // Ben's
       const ada = within(screen.getByLabelText("Ada's cards"));
       expect(ada.getAllByText(/^[2-9AKQJ]|10$/).length).toBeGreaterThan(0);
-      expect(Array.from(document.querySelectorAll('.opponent')[0]?.querySelectorAll('.reveal-hand [data-card]') ?? []).map((e) => e.getAttribute('data-card')?.split('.')[0]))
+      expect(Array.from(document.querySelector('.opponent.focus')?.querySelectorAll('.reveal-hand [data-card]') ?? []).map((e) => e.getAttribute('data-card')?.split('.')[0]))
         .toEqual(['3S', '4S', '5S', '9H']); // in a sensible order
     });
 
@@ -1355,7 +1366,7 @@ describe('watching the computers play', () => {
       expect(revealed()).toHaveLength(0);
       expect(document.querySelectorAll('.opponent .back-card').length).toBe(7); // face-down again
       fireEvent.click(screen.getByLabelText(/Show the computers’ cards/));
-      expect(revealed()).toHaveLength(7);
+      expect(revealed()).toHaveLength(4);
     });
 
     it('never shows an opponent’s cards in a game you are playing', () => {
@@ -1365,12 +1376,13 @@ describe('watching the computers play', () => {
       expect(screen.queryByLabelText(/Show the computers’ cards/)).toBeNull();
     });
 
-    it('shows the cards left in each hand after a round ends (the ones that cost points)', () => {
+    it('keeps the layout steady when a round ends: the penalties are in the banner, not in everyone’s revealed hand', () => {
       const state = scenario({ phase: 'play', hands: ['3S', 'X 5H'], baseLaid: [true, false] });
       const done = applyAction(state, { type: 'discard', cardId: '3S.1' });
       if (!done.ok) throw new Error(done.error);
       showTable({ ...watchSession(), state: done.state });
-      expect(Array.from(document.querySelectorAll('.opponent')[1]?.querySelectorAll('[data-card]') ?? []).map((e) => e.getAttribute('data-card')?.split('.')[0]).sort()).toEqual(['5H', 'X']);
+      expect(document.querySelector('.round-banner')?.textContent).toMatch(/Round over/);
+      expect(document.querySelectorAll('.opponent .reveal-hand').length).toBeLessThanOrEqual(1);
     });
   });
 
@@ -1475,9 +1487,24 @@ describe('watching the computers play', () => {
       expect(screen.getByRole('button', { name: /Pause/ })).toBeTruthy(); // running, not paused
     });
 
+    it('the arrows beside Pause change the speed: slower and faster, with the speed shown between', async () => {
+      localStorage.removeItem('15steps.speed.v1');
+      await startWatching();
+      const label = () => document.querySelector('.speed-label')?.textContent;
+      expect(label()).toBe('1×');
+      fireEvent.click(screen.getByRole('button', { name: 'Faster' }));
+      expect(label()).toBe('1.5×');
+      for (let i = 0; i < 6; i++) fireEvent.click(screen.getByRole('button', { name: 'Faster' }));
+      expect((screen.getByRole('button', { name: 'Faster' }) as HTMLButtonElement).disabled).toBe(true); // at the fastest
+      for (let i = 0; i < 6; i++) fireEvent.click(screen.getByRole('button', { name: 'Slower' }));
+      expect(label()).toBe('0.5×');
+      expect((screen.getByRole('button', { name: 'Slower' }) as HTMLButtonElement).disabled).toBe(true); // at the slowest
+      localStorage.removeItem('15steps.speed.v1');
+    });
+
     it('shows the computers’ cards in the running app', async () => {
       await startWatching();
-      expect(document.querySelectorAll('.opponent .reveal-hand').length).toBe(2);
+      expect(document.querySelectorAll('.opponent .reveal-hand').length).toBe(1); // the computer whose turn it is
       expect(document.querySelectorAll('.opponent .reveal-hand .card').length).toBeGreaterThan(10);
     });
   });
@@ -1595,12 +1622,17 @@ describe('the polished look', () => {
       expect(board.textContent).toMatch(/Lowest score wins/i);
     });
 
-    it('shows whose turn it is in a pill at the bottom left, once', () => {
-      show({ hands: ['3S', '5H', '3C'], current: 2 });
+    it('shows "Your turn — draw a card" once, inside your own window, and only while you are drawing', () => {
+      show({ hands: ['3S', '5H', '3C'], current: 0, phase: 'draw' });
       const pills = document.querySelectorAll('.status-pill');
       expect(pills).toHaveLength(1);
-      expect(pills[0]?.textContent).toBe("Ben's turn");
-      expect(document.querySelector('.bottom')?.contains(pills[0] as Node)).toBe(true);
+      expect(pills[0]?.textContent).toBe('Your turn — draw a card');
+      expect(document.querySelector('.mine')?.contains(pills[0] as Node)).toBe(true);
+    });
+
+    it('shows no turn pill while a computer is playing (the glowing window and the activity card say who)', () => {
+      show({ hands: ['3S', '5H', '3C'], current: 2 });
+      expect(document.querySelectorAll('.status-pill')).toHaveLength(0);
     });
 
     it('each computer has a name pill and a card back per card in their hand', () => {
@@ -1621,7 +1653,7 @@ describe('the polished look', () => {
     });
 
     it('your own panel glows on your turn, and has a name tab', () => {
-      show({ hands: ['3S', '5H', '3C'], current: 0 });
+      show({ hands: ['3S', '5H', '3C'], current: 0, phase: 'draw' });
       const mine = document.querySelector('.mine') as HTMLElement;
       expect(mine.classList.contains('active')).toBe(true);
       expect(mine.querySelector('.tab')?.textContent).toContain('Sam');
@@ -1659,7 +1691,7 @@ describe('opponents show their step in full, and the table is arranged to fit', 
     // all in the pill in the bar across the top of the window
     expect(panel(0).querySelector('.opp-bar .step-pill')?.textContent?.trim()).toBe('Step 3: one run of 7');
     expect(panel(1).querySelector('.opp-bar .step-pill')?.textContent?.trim()).toBe('Step 9: two runs of 3 + one set of 3');
-    expect(document.querySelector('.goal')?.textContent).toContain('Step 1:'); // yours, for comparison
+    expect(document.querySelector('.mine .mine-step')?.textContent).toContain('Step 1:'); // yours, for comparison
   });
 
   it('covers every step, matching the wording used on your own panel', () => {
@@ -1685,24 +1717,44 @@ describe('opponents show their step in full, and the table is arranged to fit', 
   it('also shows the step details when you are only watching', () => {
     const watchSeats = [{ name: 'Ada', kind: 'hard' as const }, { name: 'Ben', kind: 'medium' as const }];
     show({ hands: ['3S 4S', '5H'], steps: [7, 12] }, watchSeats);
-    expect(panel(0).querySelector('.opp-bar .step-pill')?.textContent?.trim()).toBe('Step 7: one set of 4 + one run of 3');
-    expect(panel(1).querySelector('.opp-bar .step-pill')?.textContent?.trim()).toBe('Step 12: one set of 3 + one run of 7');
+    const seat = (i: number) => document.querySelector(`.opponent[data-seat="${i}"] .opp-bar .step-pill`)?.textContent?.trim();
+    expect(seat(0)).toBe('Step 7: one set of 4 + one run of 3');
+    expect(seat(1)).toBe('Step 12: one set of 3 + one run of 7');
   });
 
-  it('the piles and the melds sit side by side in one centred row, with whose turn it is at the bottom left', () => {
+  it('six computers playing use the very same carousel layout as a game with you in it (no stacked column of hands)', () => {
+    const six = ['Ada', 'Ben', 'Cleo', 'Dax', 'Eve', 'Finn'].map((name) => ({ name, kind: 'hard' as const }));
+    show({ hands: ['3S 4S', '5H', '3C', '4C', '6C', '7C'], current: 3 }, six);
+    const opp = document.querySelector('.opponents') as HTMLElement;
+    expect(opp.hasAttribute('data-carousel')).toBe(true);
+    expect(opp.getAttribute('data-count')).toBe('5');
+    expect(document.querySelectorAll('.opponent')).toHaveLength(6);
+    expect(opp.querySelector('.opponent.focus')?.getAttribute('data-seat')).toBe('3');
+    expect(document.querySelectorAll('.opponent.side')).toHaveLength(5);
+  });
+
+  it('the piles and the melds sit side by side in one centred row', () => {
     show({ hands: ['3S', '5H', '3C'], melds: [set(1, 1, 6, '6C 6D 6H.2')] });
     const board = document.querySelector('.center > .board') as HTMLElement;
     expect(board.querySelector('.piles')).toBeTruthy();
     expect(board.querySelector('.melds')).toBeTruthy();
-    expect(document.querySelector('.bottom > .status-pill')).toBeTruthy();
   });
 
-  it('the activity card sits in the bottom row, to the right of your window, so it cannot cover anything', () => {
+  it('the activity card sits at the bottom left, beside your window, so it cannot cover anything', () => {
     show({ hands: ['3S', '5H', '3C'] });
     const bottom = document.querySelector('.bottom') as HTMLElement;
     expect(bottom.querySelector('.mine')).toBeTruthy();
     expect(bottom.querySelector('.log')).toBeTruthy();
     expect(document.querySelector('.topbar .log')).toBeNull();
     expect(document.querySelector('.topbar .topbar-buttons')).toBeTruthy();
+  });
+
+  it('with several opponents the one whose turn it is is in the middle of a carousel, and clicking another brings them there', () => {
+    show({ hands: ['3S', '5H', '3C', '4C'], current: 2 });
+    const focus = () => document.querySelector('.opponents[data-carousel] .opponent.focus')?.getAttribute('data-seat');
+    expect(focus()).toBe('2');
+    expect(document.querySelectorAll('.opponent.side')).toHaveLength(2);
+    fireEvent.click(document.querySelector('.opponent.side') as HTMLElement);
+    expect(focus()).not.toBe('2');
   });
 });
