@@ -21,11 +21,9 @@ interface TableProps {
   /** Take back your last play this turn. */
   onUndo?: () => void;
   /** Controls for watching computers play (only used when there is no human seat). */
-  watch?: {
-    paused: boolean; onTogglePause: () => void; onStep: () => void;
-    /** The speed arrows: how fast the computers play and the cards fly. */
-    speed?: { label: string; canSlower: boolean; canFaster: boolean; onSlower: () => void; onFaster: () => void };
-  };
+  watch?: { paused: boolean; onTogglePause: () => void; onStep: () => void };
+  /** The speed arrows, always on screen: how fast the computers play and the cards fly. */
+  speed?: { label: string; canSlower: boolean; canFaster: boolean; onSlower: () => void; onFaster: () => void };
 }
 
 /** Things that are not "empty board": anything you can press, plus cards, melds, the hand and pop-ups. */
@@ -40,7 +38,7 @@ interface Choice {
   apply: (spec: MeldSpec) => void;
 }
 
-export function Table({ session, onAction, onNewGame, onUndo, watch }: TableProps) {
+export function Table({ session, onAction, onNewGame, onUndo, watch, speed }: TableProps) {
   const { state, seats, log } = session;
   const me = humanSeat(session);
   const player = me >= 0 ? state.players[me] : undefined;
@@ -316,13 +314,6 @@ export function Table({ session, onAction, onNewGame, onUndo, watch }: TableProp
         <button type="button" onClick={watch.onStep} disabled={!watch.paused || state.phase === 'gameOver'} title="Play one move">
           Step
         </button>
-        {watch.speed && (
-          <span className="speed" role="group" aria-label="Speed">
-            <button type="button" className="arrow" aria-label="Slower" title="Slower" disabled={!watch.speed.canSlower} onClick={watch.speed.onSlower}>◀</button>
-            <span className="speed-label" aria-live="polite">{watch.speed.label}</span>
-            <button type="button" className="arrow" aria-label="Faster" title="Faster" disabled={!watch.speed.canFaster} onClick={watch.speed.onFaster}>▶</button>
-          </span>
-        )}
         <label>
           <input type="checkbox" checked={showCards} onChange={(e) => setShowCards(e.target.checked)} /> Show the computers’ cards
         </label>
@@ -331,6 +322,14 @@ export function Table({ session, onAction, onNewGame, onUndo, watch }: TableProp
     )}
         <div className="topbar-right">
           <div className="topbar-buttons">
+            {speed && (
+              <span className="speed" role="group" aria-label="Speed" title="How fast the computers play">
+                <span className="speed-title">Speed</span>
+                <button type="button" className="arrow" aria-label="Slower" title="Slower" disabled={!speed.canSlower} onClick={speed.onSlower}>◀</button>
+                <span className="speed-label" aria-live="polite">{speed.label}</span>
+                <button type="button" className="arrow" aria-label="Faster" title="Faster" disabled={!speed.canFaster} onClick={speed.onFaster}>▶</button>
+              </span>
+            )}
             <button type="button" onClick={() => setShowOptions(true)}>Options</button>
             <button type="button" onClick={() => setShowSteps(true)}>15 steps</button>
             <button type="button" className="danger" onClick={onNewGame}>{watching ? 'Stop watching' : 'New game'}</button>

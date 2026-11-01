@@ -558,3 +558,8 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
 /* In the carousel every window, middle or side, is a plain stack (name bar, details, cards), never the two-column layout used for a lone opponent. */
 .opponents[data-carousel] .opponent { display: block !important; }
 .opponents[data-carousel] .opp-meta { white-space: normal; }
+
+/* The speed control is in the top bar in every game, beside the menu buttons. */
+.topbar-buttons { align-items: center; }
+.speed { background: var(--panel); border: 2px solid var(--panel-edge); border-radius: 999px; padding: 3px 6px 3px 12px; font-size: 0.9rem; }
+.speed-title { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; opacity: 0.75; margin-right: 2px; }

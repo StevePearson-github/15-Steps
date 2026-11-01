@@ -65,6 +65,16 @@ describe('starting a game', () => {
     await waitFor(() => screen.getByText(/draw a card/), { timeout: 3000 });
   });
 
+  it('has the speed arrows on screen in a game you are playing, not only when watching', async () => {
+    vi.spyOn(Math, 'random').mockReturnValue(0.5);
+    render(<App aiDelayMs={0} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Start game' }));
+    await waitFor(() => screen.getByText(/draw a card/));
+    expect(screen.getByRole('group', { name: 'Speed' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Slower' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Faster' })).toBeTruthy();
+  });
+
   it('offers to continue a saved game', async () => {
     vi.spyOn(Math, 'random').mockReturnValue(0.5);
     const first = render(<App aiDelayMs={0} />);

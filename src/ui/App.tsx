@@ -101,11 +101,17 @@ export function App({ aiDelayMs = 700 }: { aiDelayMs?: number }) {
         setSession(null);
       }}
       onUndo={() => setSession((s) => (s ? undo(s) : s))}
+      speed={{
+        label: speedLabel(speed),
+        canSlower: speed > 0,
+        canFaster: speed < SPEED_FACTORS.length - 1,
+        onSlower: () => setSpeed((s) => Math.max(0, s - 1)),
+        onFaster: () => setSpeed((s) => Math.min(SPEED_FACTORS.length - 1, s + 1)),
+      }}
       watch={{
         paused,
         onTogglePause: () => setPaused((p) => !p),
         onStep: advance,
-        speed: { label: speedLabel(speed), canSlower: speed > 0, canFaster: speed < SPEED_FACTORS.length - 1, onSlower: () => setSpeed((s) => Math.max(0, s - 1)), onFaster: () => setSpeed((s) => Math.min(SPEED_FACTORS.length - 1, s + 1)) },
       }}
     />
   );
