@@ -120,6 +120,21 @@ describe('playing a turn', () => {
     expect(actions[0]).toMatchObject({ type: 'layBase', melds: [{ kind: 'set', rank: 7 }, { kind: 'set', rank: 8 }] });
   });
 
+  it('asks which end a wild takes in a run when you lay the base, instead of guessing', () => {
+    // Step 8: two runs of 4. 10-J-Q + joker can be 9-Q or 10-K, and the player wants the king.
+    const actions = tableFor({ hands: ['TD JD QD X 3C 4C 5C 8S 2H', '5H 6H'], steps: [8, 1] });
+    clickCards('TD.1', 'JD.1', 'QD.1', 'X.1', '3C.1', '4C.1', '5C.1', '2H.1');
+    fireEvent.click(screen.getByRole('button', { name: 'Lay down base' }));
+    expect(actions).toHaveLength(0);
+    expect(screen.getByRole('dialog', { name: 'Which run is this?' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: /10–K/ }));
+    // the clubs run (3-4-5 with a wild 2) is ambiguous too, so it is asked about next
+    fireEvent.click(screen.getByRole('button', { name: /3–6/ }));
+    expect(actions[0]).toMatchObject({ type: 'layBase' });
+    const runs = (actions[0] as { melds: { kind: string; suit: string; start: number }[] }).melds;
+    expect(runs.find((m) => m.suit === 'D')?.start).toBe(10);
+  });
+
   it('suggests a base by selecting its cards in your hand, then lays it down', () => {
     const actions = tableFor({ hands: ['7S 7H 7D 8S 8H 8D 4C 9C', '5H 6H'] });
     fireEvent.click(screen.getByRole('button', { name: 'Suggest base' }));

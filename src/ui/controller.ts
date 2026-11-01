@@ -203,6 +203,22 @@ export function baseFromSelection(selected: readonly Card[], step: number): Meld
   return used === selected.length ? base : null;
 }
 
+/**
+ * For a selection that makes up the base: each of its melds with every reading it
+ * could have (a wild at the end of a run can stand for the card above or below).
+ * The player is asked to pick wherever there is more than one.
+ */
+export function baseChoices(selected: readonly Card[], step: number): MeldSpec[][] | null {
+  const base = baseFromSelection(selected, step);
+  if (!base) return null;
+  const byId = new Map(selected.map((c) => [c.id, c]));
+  return base.map((spec) => {
+    const cards = spec.cardIds.map((id) => byId.get(id) as Card);
+    const options = meldOptions(cards, true, [spec.kind]);
+    return options.length > 0 ? options : [spec];
+  });
+}
+
 /** Do these staged melds make up the player's base? */
 export function stagedMeetBase(staged: MeldSpec[], hand: readonly Card[], step: number): boolean {
   const byId = new Map(hand.map((c) => [c.id, c]));

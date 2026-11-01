@@ -10,7 +10,7 @@ import { Hand, type HandHandle } from './Hand';
 import { fitToWindow, resetFit } from './fit';
 import { type Snapshot, captureCards, getMotionScale, motionAvailable, playMotion } from './motion';
 import {
-  AVATARS, SORTERS, loadUiOptions, saveUiOptions, sortHandSmart, type Session, type SortDir, type SortKey, arrangeHand, baseFromSelection, canUndo,
+  AVATARS, SORTERS, loadUiOptions, saveUiOptions, sortHandSmart, type Session, type SortDir, type SortKey, arrangeHand, baseChoices, baseFromSelection, canUndo,
   describeSpec, describeStep, humanSeat, seatColor, meldOptions, moveCards, orderForBuild, stagedMeetBase, stepKinds, verb,
 } from './controller';
 
@@ -230,7 +230,19 @@ export function Table({ session, onAction, onNewGame, onUndo, watch, speed, soun
   const layBase = () => {
     if (baseReady) {
       if (run({ type: 'layBase', melds: staged })) setStaged([]);
-    } else if (selectionBase && run({ type: 'layBase', melds: selectionBase })) setStaged([]);
+    } else if (selectionBase && player) {
+      // Where the cards could be read more than one way (a wild at the end of a run), ask which one is meant.
+      const choices = baseChoices(selectedCards, player.step) ?? selectionBase.map((m) => [m]);
+      const pick = (i: number, chosen: MeldSpec[]) => {
+        const options = choices[i];
+        if (!options) {
+          if (run({ type: 'layBase', melds: chosen })) setStaged([]);
+          return;
+        }
+        offer(options[0]?.kind === 'run' ? 'Which run is this?' : 'What are these cards?', options, (spec) => pick(i + 1, [...chosen, spec]));
+      };
+      pick(0, []);
+    }
   };
 
   const build = (meld: Meld, side?: 'low' | 'high') => {
