@@ -83,7 +83,7 @@ export function Table({ session, onAction, onNewGame, onUndo, watch }: TableProp
     : Array.from({ length: state.players.length - 1 }, (_, k) => (me + 1 + k) % state.players.length);
   // Carousel: with several opponents, the one whose turn it is (or who just played, when it is your turn) is shown large in the middle,
   // with the others smaller to the left and right in turn order. Clicking a smaller one brings it to the middle until the turn moves on.
-  const carousel = !watching && playerOrder.length >= 2;
+  const carousel = playerOrder.length >= 2;
   const [pinned, setPinned] = useState<number | null>(null);
   useEffect(() => setPinned(null), [state.current]);
   const natural = playerOrder.includes(state.current) ? state.current : (playerOrder[playerOrder.length - 1] as number);
@@ -298,7 +298,21 @@ export function Table({ session, onAction, onNewGame, onUndo, watch }: TableProp
           </ul>
           <span className="sb-note">Lowest score wins</span>
         </div>
-        {(!player || state.phase === 'gameOver') && <div className="status-pill" aria-live="polite">{turnText}</div>}
+        {(state.phase === 'gameOver' || (watching && watch?.paused)) && <div className="status-pill" aria-live="polite">{turnText}</div>}
+    {watching && watch && (
+      <section className="watch-bar" aria-label="Watching controls">
+        <button type="button" className="primary" onClick={watch.onTogglePause} aria-pressed={watch.paused}>
+          {watch.paused ? '▶ Resume' : '❚❚ Pause'}
+        </button>
+        <button type="button" onClick={watch.onStep} disabled={!watch.paused || state.phase === 'gameOver'} title="Play one move">
+          Step
+        </button>
+        <label>
+          <input type="checkbox" checked={showCards} onChange={(e) => setShowCards(e.target.checked)} /> Show the computers’ cards
+        </label>
+        <button type="button" onClick={onNewGame}>Stop game</button>
+      </section>
+    )}
         <div className="topbar-right">
           <div className="topbar-buttons">
             <button type="button" onClick={() => setShowOptions(true)}>Options</button>
@@ -308,22 +322,7 @@ export function Table({ session, onAction, onNewGame, onUndo, watch }: TableProp
         </div>
       </header>
 
-      {watching && watch && (
-        <section className="watch-bar" aria-label="Watching controls">
-          <button type="button" className="primary" onClick={watch.onTogglePause} aria-pressed={watch.paused}>
-            {watch.paused ? '▶ Resume' : '❚❚ Pause'}
-          </button>
-          <button type="button" onClick={watch.onStep} disabled={!watch.paused || state.phase === 'gameOver'} title="Play one move">
-            Step
-          </button>
-          <label>
-            <input type="checkbox" checked={showCards} onChange={(e) => setShowCards(e.target.checked)} /> Show the computers’ cards
-          </label>
-          <button type="button" onClick={onNewGame}>Stop game</button>
-        </section>
-      )}
-
-      <section className="opponents" aria-label="Players" data-count={watching && showCards ? undefined : state.players.length - (me >= 0 ? 1 : 0)} data-carousel={carousel ? 1 : undefined}>
+      <section className="opponents" aria-label="Players" data-count={Math.min(playerOrder.length, 5)} data-carousel={carousel ? 1 : undefined}>
         {shown.map((i) => {
           const p = state.players[i];
           if (!p) return null;
@@ -343,7 +342,7 @@ export function Table({ session, onAction, onNewGame, onUndo, watch }: TableProp
                 </span>
               </div>
               <div className="opp-desc" title={describeStep(p.step)}>{describeStep(p.step)}</div>
-              {watching && showCards ? (
+              {watching && showCards && (!carousel || i === focus) ? (
                 <div className="reveal-hand" data-region={`reveal-${i}`} aria-label={`${seats[i]?.name}'s cards`}>
                   {arrangeHand(p.hand, []).map((c) => <CardView key={c.id} card={c} small />)}
                 </div>

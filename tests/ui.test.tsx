@@ -1340,12 +1340,13 @@ describe('watching the computers play', () => {
   const revealed = () => document.querySelectorAll('.opponent .reveal-hand .card');
 
   describe('seeing the cards', () => {
-    it('shows every computer’s cards face-up', () => {
+    it('shows the cards of the computer whose turn it is (in the middle of the carousel) face-up, the others face-down', () => {
       showTable(watchSession());
-      expect(revealed()).toHaveLength(7); // 4 + 3
+      expect(revealed()).toHaveLength(4); // Ada's, whose turn it is
+      expect(document.querySelectorAll('.opponent .back-card').length).toBe(3); // Ben's
       const ada = within(screen.getByLabelText("Ada's cards"));
       expect(ada.getAllByText(/^[2-9AKQJ]|10$/).length).toBeGreaterThan(0);
-      expect(Array.from(document.querySelectorAll('.opponent')[0]?.querySelectorAll('.reveal-hand [data-card]') ?? []).map((e) => e.getAttribute('data-card')?.split('.')[0]))
+      expect(Array.from(document.querySelector('.opponent.focus')?.querySelectorAll('.reveal-hand [data-card]') ?? []).map((e) => e.getAttribute('data-card')?.split('.')[0]))
         .toEqual(['3S', '4S', '5S', '9H']); // in a sensible order
     });
 
@@ -1355,7 +1356,7 @@ describe('watching the computers play', () => {
       expect(revealed()).toHaveLength(0);
       expect(document.querySelectorAll('.opponent .back-card').length).toBe(7); // face-down again
       fireEvent.click(screen.getByLabelText(/Show the computers’ cards/));
-      expect(revealed()).toHaveLength(7);
+      expect(revealed()).toHaveLength(4);
     });
 
     it('never shows an opponent’s cards in a game you are playing', () => {
@@ -1365,12 +1366,13 @@ describe('watching the computers play', () => {
       expect(screen.queryByLabelText(/Show the computers’ cards/)).toBeNull();
     });
 
-    it('shows the cards left in each hand after a round ends (the ones that cost points)', () => {
+    it('keeps the layout steady when a round ends: the penalties are in the banner, not in everyone’s revealed hand', () => {
       const state = scenario({ phase: 'play', hands: ['3S', 'X 5H'], baseLaid: [true, false] });
       const done = applyAction(state, { type: 'discard', cardId: '3S.1' });
       if (!done.ok) throw new Error(done.error);
       showTable({ ...watchSession(), state: done.state });
-      expect(Array.from(document.querySelectorAll('.opponent')[1]?.querySelectorAll('[data-card]') ?? []).map((e) => e.getAttribute('data-card')?.split('.')[0]).sort()).toEqual(['5H', 'X']);
+      expect(document.querySelector('.round-banner')?.textContent).toMatch(/Round over/);
+      expect(document.querySelectorAll('.opponent .reveal-hand').length).toBeLessThanOrEqual(1);
     });
   });
 
@@ -1477,7 +1479,7 @@ describe('watching the computers play', () => {
 
     it('shows the computers’ cards in the running app', async () => {
       await startWatching();
-      expect(document.querySelectorAll('.opponent .reveal-hand').length).toBe(2);
+      expect(document.querySelectorAll('.opponent .reveal-hand').length).toBe(1); // the computer whose turn it is
       expect(document.querySelectorAll('.opponent .reveal-hand .card').length).toBeGreaterThan(10);
     });
   });
@@ -1690,8 +1692,20 @@ describe('opponents show their step in full, and the table is arranged to fit', 
   it('also shows the step details when you are only watching', () => {
     const watchSeats = [{ name: 'Ada', kind: 'hard' as const }, { name: 'Ben', kind: 'medium' as const }];
     show({ hands: ['3S 4S', '5H'], steps: [7, 12] }, watchSeats);
-    expect(panel(0).querySelector('.opp-bar .step-pill')?.textContent?.trim()).toBe('Step 7: one set of 4 + one run of 3');
-    expect(panel(1).querySelector('.opp-bar .step-pill')?.textContent?.trim()).toBe('Step 12: one set of 3 + one run of 7');
+    const seat = (i: number) => document.querySelector(`.opponent[data-seat="${i}"] .opp-bar .step-pill`)?.textContent?.trim();
+    expect(seat(0)).toBe('Step 7: one set of 4 + one run of 3');
+    expect(seat(1)).toBe('Step 12: one set of 3 + one run of 7');
+  });
+
+  it('six computers playing use the very same carousel layout as a game with you in it (no stacked column of hands)', () => {
+    const six = ['Ada', 'Ben', 'Cleo', 'Dax', 'Eve', 'Finn'].map((name) => ({ name, kind: 'hard' as const }));
+    show({ hands: ['3S 4S', '5H', '3C', '4C', '6C', '7C'], current: 3 }, six);
+    const opp = document.querySelector('.opponents') as HTMLElement;
+    expect(opp.hasAttribute('data-carousel')).toBe(true);
+    expect(opp.getAttribute('data-count')).toBe('5');
+    expect(document.querySelectorAll('.opponent')).toHaveLength(6);
+    expect(opp.querySelector('.opponent.focus')?.getAttribute('data-seat')).toBe('3');
+    expect(document.querySelectorAll('.opponent.side')).toHaveLength(5);
   });
 
   it('the piles and the melds sit side by side in one centred row', () => {

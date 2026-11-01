@@ -202,11 +202,9 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
 }
 
 /* Watching: everyone's cards face-up */
-.opponents:has(.reveal-hand) { flex-direction: column; }
-.opponents:has(.reveal-hand) .opponent { width: 100%; flex: none; max-width: none; transform: none; }
 .reveal-hand { display: flex; flex-wrap: wrap; margin-top: 8px; padding-left: calc(var(--small-w) * 0.5); row-gap: 6px; }
 .reveal-hand .card { margin-left: calc(var(--small-w) * -0.5); }
-.watch-bar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; background: var(--panel); border: 2px solid var(--panel-edge); border-radius: 16px; padding: 8px 14px; }
+.watch-bar { display: flex; flex-wrap: nowrap; gap: 10px; align-items: center; background: var(--panel); border: 2px solid var(--panel-edge); border-radius: 16px; padding: 6px 12px; font-size: 0.9rem; white-space: nowrap; }
 .watch-bar label { display: flex; gap: 6px; align-items: center; }
 
 /* ---- The middle: piles, melds, whose turn ----------------------------- */
@@ -538,3 +536,16 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
 }
 .table:has(.opponents[data-count='3']) .topbar, .table:has(.opponents[data-count='4']) .topbar, .table:has(.opponents[data-count='5']) .topbar { justify-content: flex-end; }
 .table:has(.opponents[data-count='3']) .opponents, .table:has(.opponents[data-count='4']) .opponents, .table:has(.opponents[data-count='5']) .opponents { margin-top: 24px; }
+
+/* Watching: the focused computer's cards are face-up (small, overlapped) inside the same carousel window as a normal game. */
+.opponents[data-carousel] .reveal-hand { --small-w: calc(var(--back-w) * 1.05); --small-h: calc(var(--small-w) * 1.414); padding-left: calc(var(--small-w) * 0.5); margin-top: 6px; }
+.topbar .watch-bar { align-self: center; margin: 0 12px 0 auto; }
+
+/* Six windows in the carousel (watching six computers): a narrower middle and smaller text on the five small ones, so their tabs never collide. */
+.opponents[data-carousel]:has(> .opponent:nth-child(6)) { gap: 10px; }
+.opponents[data-carousel]:has(> .opponent:nth-child(6)) .opponent.focus { flex-basis: min(34%, 500px); }
+.opponents[data-carousel]:has(> .opponent:nth-child(6)) .opponent.side { padding-left: 6px; padding-right: 6px; }
+.opponents[data-carousel]:has(> .opponent:nth-child(6)) .opponent.side .opp-bar { left: 4px; right: 4px; gap: 3px; }
+.opponents[data-carousel]:has(> .opponent:nth-child(6)) .opponent.side .tab,
+.opponents[data-carousel]:has(> .opponent:nth-child(6)) .opponent.side .step-pill { font-size: 0.7rem; padding-left: 0.45em; padding-right: 0.45em; }
+.opponents[data-carousel]:has(> .opponent:nth-child(6)) .opponent.side .opp-meta { font-size: 0.7rem; }
