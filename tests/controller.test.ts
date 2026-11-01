@@ -485,3 +485,25 @@ describe('remembering the new-game settings', () => {
     expect(sanitizeSetup({ opponents: ['hard'], spectate: true }).opponents).toEqual(['hard', 'medium']); // watching needs at least 2
   });
 });
+
+describe('watching speed', () => {
+  it('labels each level as a multiple of normal speed, with 1× in the default place', async () => {
+    const { SPEED_FACTORS, DEFAULT_SPEED, speedLabel } = await import('../src/ui/controller');
+    expect(SPEED_FACTORS.map((_, i) => speedLabel(i))).toEqual(['0.5×', '0.7×', '1×', '1.5×', '2.9×', '6.7×']);
+    expect(speedLabel(DEFAULT_SPEED)).toBe('1×');
+    expect([...SPEED_FACTORS]).toEqual([...SPEED_FACTORS].sort((a, b) => b - a)); // slower to faster
+  });
+
+  it('remembers the speed, and ignores anything that is not a valid level', async () => {
+    const { loadSpeed, saveSpeed, DEFAULT_SPEED } = await import('../src/ui/controller');
+    const mem = new Map<string, string>();
+    const store = { getItem: (k: string) => mem.get(k) ?? null, setItem: (k: string, v: string) => void mem.set(k, v) };
+    expect(loadSpeed(store)).toBe(DEFAULT_SPEED);
+    saveSpeed(4, store);
+    expect(loadSpeed(store)).toBe(4);
+    saveSpeed(99, store);
+    expect(loadSpeed(store)).toBe(DEFAULT_SPEED);
+    mem.set('15steps.speed.v1', 'fast');
+    expect(loadSpeed(store)).toBe(DEFAULT_SPEED);
+  });
+});

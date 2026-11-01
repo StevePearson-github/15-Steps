@@ -1477,6 +1477,21 @@ describe('watching the computers play', () => {
       expect(screen.getByRole('button', { name: /Pause/ })).toBeTruthy(); // running, not paused
     });
 
+    it('the arrows beside Pause change the speed: slower and faster, with the speed shown between', async () => {
+      localStorage.removeItem('15steps.speed.v1');
+      await startWatching();
+      const label = () => document.querySelector('.speed-label')?.textContent;
+      expect(label()).toBe('1×');
+      fireEvent.click(screen.getByRole('button', { name: 'Faster' }));
+      expect(label()).toBe('1.5×');
+      for (let i = 0; i < 6; i++) fireEvent.click(screen.getByRole('button', { name: 'Faster' }));
+      expect((screen.getByRole('button', { name: 'Faster' }) as HTMLButtonElement).disabled).toBe(true); // at the fastest
+      for (let i = 0; i < 6; i++) fireEvent.click(screen.getByRole('button', { name: 'Slower' }));
+      expect(label()).toBe('0.5×');
+      expect((screen.getByRole('button', { name: 'Slower' }) as HTMLButtonElement).disabled).toBe(true); // at the slowest
+      localStorage.removeItem('15steps.speed.v1');
+    });
+
     it('shows the computers’ cards in the running app', async () => {
       await startWatching();
       expect(document.querySelectorAll('.opponent .reveal-hand').length).toBe(1); // the computer whose turn it is

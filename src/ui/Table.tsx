@@ -7,7 +7,7 @@ import { CardView } from './CardView';
 import { ContextMenu } from './ContextMenu';
 import { Hand, type HandHandle } from './Hand';
 import { fitToWindow, resetFit } from './fit';
-import { type Snapshot, captureCards, motionAvailable, playMotion } from './motion';
+import { type Snapshot, captureCards, getMotionScale, motionAvailable, playMotion } from './motion';
 import {
   AVATARS, SORTERS, loadUiOptions, saveUiOptions, sortHandSmart, type Session, type SortDir, type SortKey, arrangeHand, baseFromSelection, canUndo,
   describeSpec, describeStep, humanSeat, seatColor, meldOptions, moveCards, orderForBuild, stagedMeetBase, stepKinds, verb,
@@ -21,7 +21,11 @@ interface TableProps {
   /** Take back your last play this turn. */
   onUndo?: () => void;
   /** Controls for watching computers play (only used when there is no human seat). */
-  watch?: { paused: boolean; onTogglePause: () => void; onStep: () => void };
+  watch?: {
+    paused: boolean; onTogglePause: () => void; onStep: () => void;
+    /** The speed arrows: how fast the computers play and the cards fly. */
+    speed?: { label: string; canSlower: boolean; canFaster: boolean; onSlower: () => void; onFaster: () => void };
+  };
 }
 
 /** Things that are not "empty board": anything you can press, plus cards, melds, the hand and pop-ups. */
@@ -98,14 +102,19 @@ export function Table({ session, onAction, onNewGame, onUndo, watch }: TableProp
   const oppRects = useRef(new Map<string, DOMRect>());
   useLayoutEffect(() => {
     const els = Array.from(rootRef.current?.querySelectorAll<HTMLElement>('.opponents[data-carousel] .opponent') ?? []);
+    const scale = getMotionScale();
     const next = new Map<string, DOMRect>();
     for (const el of els) {
+      // Measure where each window really is, not where an unfinished slide has it.
+      if (typeof el.getAnimations === 'function') for (const a of el.getAnimations()) if (a.id === 'carousel') a.cancel();
       const key = el.dataset.seat ?? '';
       const rect = el.getBoundingClientRect();
       next.set(key, rect);
       const prev = oppRects.current.get(key);
-      if (options.animations && prev && Math.abs(prev.left - rect.left) > 2 && typeof el.animate === 'function') {
-        el.animate([{ transform: `translateX(${prev.left - rect.left}px)` }, { transform: 'translateX(0)' }], { duration: 380, easing: 'ease-in-out' });
+      // At the fastest speeds the turns come quicker than a slide takes, so the windows just jump.
+      if (options.animations && scale >= 0.5 && prev && Math.abs(prev.left - rect.left) > 2 && typeof el.animate === 'function') {
+        const a = el.animate([{ transform: `translateX(${prev.left - rect.left}px)` }, { transform: 'translateX(0)' }], { duration: Math.round(380 * scale), easing: 'ease-in-out' });
+        a.id = 'carousel';
       }
     }
     oppRects.current = next;
@@ -307,6 +316,13 @@ export function Table({ session, onAction, onNewGame, onUndo, watch }: TableProp
         <button type="button" onClick={watch.onStep} disabled={!watch.paused || state.phase === 'gameOver'} title="Play one move">
           Step
         </button>
+        {watch.speed && (
+          <span className="speed" role="group" aria-label="Speed">
+            <button type="button" className="arrow" aria-label="Slower" title="Slower" disabled={!watch.speed.canSlower} onClick={watch.speed.onSlower}>◀</button>
+            <span className="speed-label" aria-live="polite">{watch.speed.label}</span>
+            <button type="button" className="arrow" aria-label="Faster" title="Faster" disabled={!watch.speed.canFaster} onClick={watch.speed.onFaster}>▶</button>
+          </span>
+        )}
         <label>
           <input type="checkbox" checked={showCards} onChange={(e) => setShowCards(e.target.checked)} /> Show the computers’ cards
         </label>
