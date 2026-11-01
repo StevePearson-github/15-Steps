@@ -572,3 +572,7 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
 .sound-row input[type='range'] { width: 100%; min-width: 8em; accent-color: var(--yellow); }
 .sound-row input[type='range']:disabled { opacity: 0.4; }
 .setup .sound-toggle { justify-content: flex-start; }
+
+/* The turn bubble sits in the true middle of the hand panel, not the leftover space between its neighbours. */
+.goal { position: relative; }
+.goal .status-pill.in-hand { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); margin: 0; max-width: 60%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
