@@ -58,7 +58,7 @@ describe('starting a game', () => {
     await waitFor(() => screen.getByText(/draw a card/));
     fireEvent.click(document.querySelector('.piles .card.back') as HTMLElement);
     await waitFor(() => expect(document.querySelectorAll('.hand .card')).toHaveLength(14));
-    expect(screen.getByText(/play, then discard/)).toBeTruthy();
+    expect(document.querySelector('.status-pill')).toBeNull(); // the draw prompt goes away once you have drawn
     fireEvent.click(document.querySelector('.hand .card') as HTMLElement);
     fireEvent.click(screen.getByRole('button', { name: 'Discard selected' }));
     await waitFor(() => expect(document.querySelectorAll('.hand .card')).toHaveLength(13));
@@ -1595,12 +1595,17 @@ describe('the polished look', () => {
       expect(board.textContent).toMatch(/Lowest score wins/i);
     });
 
-    it('shows whose turn it is in a pill at the bottom left, once', () => {
-      show({ hands: ['3S', '5H', '3C'], current: 2 });
+    it('shows "Your turn — draw a card" once, inside your own window, and only while you are drawing', () => {
+      show({ hands: ['3S', '5H', '3C'], current: 0, phase: 'draw' });
       const pills = document.querySelectorAll('.status-pill');
       expect(pills).toHaveLength(1);
-      expect(pills[0]?.textContent).toBe("Ben's turn");
-      expect(document.querySelector('.bottom')?.contains(pills[0] as Node)).toBe(true);
+      expect(pills[0]?.textContent).toBe('Your turn — draw a card');
+      expect(document.querySelector('.mine')?.contains(pills[0] as Node)).toBe(true);
+    });
+
+    it('shows no turn pill while a computer is playing (the glowing window and the activity card say who)', () => {
+      show({ hands: ['3S', '5H', '3C'], current: 2 });
+      expect(document.querySelectorAll('.status-pill')).toHaveLength(0);
     });
 
     it('each computer has a name pill and a card back per card in their hand', () => {
@@ -1621,7 +1626,7 @@ describe('the polished look', () => {
     });
 
     it('your own panel glows on your turn, and has a name tab', () => {
-      show({ hands: ['3S', '5H', '3C'], current: 0 });
+      show({ hands: ['3S', '5H', '3C'], current: 0, phase: 'draw' });
       const mine = document.querySelector('.mine') as HTMLElement;
       expect(mine.classList.contains('active')).toBe(true);
       expect(mine.querySelector('.tab')?.textContent).toContain('Sam');
@@ -1689,20 +1694,28 @@ describe('opponents show their step in full, and the table is arranged to fit', 
     expect(panel(1).querySelector('.opp-bar .step-pill')?.textContent?.trim()).toBe('Step 12: one set of 3 + one run of 7');
   });
 
-  it('the piles and the melds sit side by side in one centred row, with whose turn it is at the bottom left', () => {
+  it('the piles and the melds sit side by side in one centred row', () => {
     show({ hands: ['3S', '5H', '3C'], melds: [set(1, 1, 6, '6C 6D 6H.2')] });
     const board = document.querySelector('.center > .board') as HTMLElement;
     expect(board.querySelector('.piles')).toBeTruthy();
     expect(board.querySelector('.melds')).toBeTruthy();
-    expect(document.querySelector('.bottom > .status-pill')).toBeTruthy();
   });
 
-  it('the activity card sits in the bottom row, to the right of your window, so it cannot cover anything', () => {
+  it('the activity card sits at the bottom left, beside your window, so it cannot cover anything', () => {
     show({ hands: ['3S', '5H', '3C'] });
     const bottom = document.querySelector('.bottom') as HTMLElement;
     expect(bottom.querySelector('.mine')).toBeTruthy();
     expect(bottom.querySelector('.log')).toBeTruthy();
     expect(document.querySelector('.topbar .log')).toBeNull();
     expect(document.querySelector('.topbar .topbar-buttons')).toBeTruthy();
+  });
+
+  it('with several opponents the one whose turn it is is in the middle of a carousel, and clicking another brings them there', () => {
+    show({ hands: ['3S', '5H', '3C', '4C'], current: 2 });
+    const focus = () => document.querySelector('.opponents[data-carousel] .opponent.focus')?.getAttribute('data-seat');
+    expect(focus()).toBe('2');
+    expect(document.querySelectorAll('.opponent.side')).toHaveLength(2);
+    fireEvent.click(document.querySelector('.opponent.side') as HTMLElement);
+    expect(focus()).not.toBe('2');
   });
 });
