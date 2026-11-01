@@ -489,7 +489,7 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
 @media (max-width: 1000px) { .board { flex-wrap: wrap; } }
 
 /* "Your turn: draw a card" sits in the top edge of your own window, and goes away once you have drawn. */
-.goal .status-pill.in-hand { margin: 0 auto; padding: 1px 18px; font-size: 1rem; background: var(--yellow); color: var(--ink); border: 2px solid var(--ink); text-shadow: none; box-shadow: 0 2px 0 var(--ink); animation: pulse 1.6s ease-in-out infinite; }
+.goal .status-pill.in-hand { margin: 0 auto; padding: 1px 18px; font-size: 1rem; background: var(--yellow); color: var(--ink); border: 2px solid var(--ink); text-shadow: none; box-shadow: 0 2px 0 var(--ink); }
 .goal .status-pill.in-hand + .tip { margin-left: 0; }
 .goal { overflow: visible; }
 
@@ -514,3 +514,27 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
 .opponents[data-carousel] .opponent.side { display: block !important; }
 .opponents[data-carousel] .opponent.side .opp-meta { display: block; font-size: 0.8rem; }
 .opponents[data-carousel] .opponent.side .back-fan { margin-top: 6px; }
+
+/* Your step is a bubble on the top edge of your window, the same as on the opponents' windows. */
+.mine-step { position: absolute; top: -17px; right: 12px; font-size: 0.95rem; z-index: 1; }
+.mine.active .mine-step { background: var(--yellow); }
+/* A single opponent: the details never wrap, and the fan clears the name tab. */
+.opponents[data-count='1'] .opponent { padding-top: 34px; padding-bottom: 14px; }
+.opponents[data-count='1'] .opp-meta { white-space: nowrap; flex-wrap: nowrap; }
+
+/* One opponent: the details keep their width and the fan takes what is left, so they never overlap. */
+@media (min-width: 1000px) {
+  .opponents[data-count='1'] .opponent { grid-template-columns: max-content minmax(0, calc(var(--back-w) * 5.7)); justify-content: space-between; }
+}
+
+/* Three or more opponents: the scoreboard floats in the top-left corner and the carousel sits beside it (and just under the menu buttons),
+   instead of the scoreboard pushing everything down. */
+.table:has(.opponents[data-count='3']), .table:has(.opponents[data-count='4']), .table:has(.opponents[data-count='5']) { --sb-w: 218px; }
+.table:has(.opponents[data-count='3']) .scoreboard, .table:has(.opponents[data-count='4']) .scoreboard, .table:has(.opponents[data-count='5']) .scoreboard {
+  position: absolute; top: 10px; left: 16px; z-index: 3; width: var(--sb-w); min-width: 0;
+}
+.table:has(.opponents[data-count='3']) .opponents, .table:has(.opponents[data-count='4']) .opponents, .table:has(.opponents[data-count='5']) .opponents {
+  margin-left: calc(var(--sb-w) + 6px); padding-top: 0;
+}
+.table:has(.opponents[data-count='3']) .topbar, .table:has(.opponents[data-count='4']) .topbar, .table:has(.opponents[data-count='5']) .topbar { justify-content: flex-end; }
+.table:has(.opponents[data-count='3']) .opponents, .table:has(.opponents[data-count='4']) .opponents, .table:has(.opponents[data-count='5']) .opponents { margin-top: 24px; }

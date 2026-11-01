@@ -1664,7 +1664,7 @@ describe('opponents show their step in full, and the table is arranged to fit', 
     // all in the pill in the bar across the top of the window
     expect(panel(0).querySelector('.opp-bar .step-pill')?.textContent?.trim()).toBe('Step 3: one run of 7');
     expect(panel(1).querySelector('.opp-bar .step-pill')?.textContent?.trim()).toBe('Step 9: two runs of 3 + one set of 3');
-    expect(document.querySelector('.goal')?.textContent).toContain('Step 1:'); // yours, for comparison
+    expect(document.querySelector('.mine .mine-step')?.textContent).toContain('Step 1:'); // yours, for comparison
   });
 
   it('covers every step, matching the wording used on your own panel', () => {

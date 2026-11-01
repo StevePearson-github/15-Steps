@@ -456,11 +456,12 @@ export function Table({ session, onAction, onNewGame, onUndo, watch }: TableProp
             <span className="dot" style={{ background: seatColor(me) }} />
             {seats[me]?.name} <span className="avatar" aria-hidden="true">{AVATARS.human}</span>
           </span>
+          <span className="pill step-pill mine-step" title={`Step ${player.step}: ${describeStep(player.step)}`}>
+            <span className="step-text"><strong>Step {player.step}:</strong> {describeStep(player.step)}</span>
+            {player.baseLaid ? <span className="base-down" title="Base is down">✓ base down</span> : null}
+          </span>
           <div className="goal">
-            <span className="goal-step">
-              <strong>Step {player.step}:</strong> {describeStep(player.step)}
-              {player.baseLaid ? ' ✓ base down' : ''} · {player.score} pts
-            </span>
+            <span className="goal-step">{player.score} pts</span>
             {canPlay && !player.baseLaid && (
               <div className="staging">
                 <span>Base:</span>
@@ -473,7 +474,7 @@ export function Table({ session, onAction, onNewGame, onUndo, watch }: TableProp
                 ))}
               </div>
             )}
-            {myTurn && state.phase === 'draw' && <div className="status-pill in-hand" aria-live="polite">{turnText}</div>}
+            {myTurn && state.phase === 'draw' && <div className="status-pill in-hand" aria-live="polite">{selected.length > 0 ? 'Draw a card first — then you can lay these down' : turnText}</div>}
             <span className="tip" title="Drag cards to arrange them, or drag on the table to select several. Right-click for more.">Drag to arrange · right-click for more</span>
             {targets.length > 0 && (
               <div className="add-hint" role="status">
