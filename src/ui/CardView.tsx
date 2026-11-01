@@ -44,7 +44,7 @@ export function CardView({ card, faceDown, selected, onClick, label, small, clas
     classes.push('back');
     content = (
       <>
-        <span className="emblem">15</span>
+        <span className="emblem"><b>15</b><i>steps</i></span>
         {badge !== undefined && <span className="badge">{badge}</span>}
       </>
     );

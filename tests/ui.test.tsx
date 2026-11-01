@@ -188,8 +188,9 @@ describe('playing a turn', () => {
 
   it('does not let you act on the computer’s turn', () => {
     tableFor({ hands: ['4H 3C', '5H 6H'], current: 1 });
-    expect(screen.queryByRole('button', { name: 'Discard selected' })).toBeNull();
-    expect(screen.queryByRole('button', { name: 'Lay down base' })).toBeNull();
+    // the buttons stay on screen, greyed out, so they never seem to come and go
+    expect((screen.getByRole('button', { name: 'Discard selected' }) as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByRole('button', { name: 'Lay down base' }) as HTMLButtonElement).disabled).toBe(true);
   });
 });
 
@@ -259,7 +260,7 @@ describe('arranging your hand', () => {
     // You can select cards while waiting too (no actions are offered until your turn).
     clickCards('3S.1');
     expect(card('3S.1').getAttribute('aria-pressed')).toBe('true');
-    expect(screen.queryByRole('button', { name: 'Discard selected' })).toBeNull();
+    expect((screen.getByRole('button', { name: 'Discard selected' }) as HTMLButtonElement).disabled).toBe(true);
   });
 
   it('moves the focused card with Shift+arrow keys', () => {
@@ -322,7 +323,7 @@ describe('right-click menu', () => {
     open();
     const menu = screen.getByRole('menu', { name: 'Arrange your hand' });
     const items = within(menu).getAllByRole('menuitem').map((b) => b.textContent?.replace('▸', ''));
-    expect(items).toEqual(['Sort by sets', 'Sort by runs', 'Sort by suit', 'Sort by rank', 'Show the 15 steps', 'Undo last play', 'Clear selection']);
+    expect(items).toEqual(['Smart sort', 'Sort by sets', 'Sort by runs', 'Sort by suit', 'Sort by rank', 'Show the 15 steps', 'Undo last play', 'Clear selection']);
   });
 
   it('opens when right-clicking a card, too', () => {
@@ -547,7 +548,7 @@ describe('undo', () => {
     layBase();
     clickCards(handIds()[0] as string);
     fireEvent.click(screen.getByRole('button', { name: 'Discard selected' }));
-    expect(screen.queryByRole('button', { name: 'Undo' })).toBeNull(); // not your turn any more
+    expect((screen.getByRole('button', { name: 'Undo' }) as HTMLButtonElement).disabled).toBe(true); // not your turn any more
   });
 });
 
@@ -937,11 +938,33 @@ describe('the 15 steps pop-up', () => {
     fireEvent.click(screen.getByRole('menuitem', { name: 'Show the 15 steps' }));
   };
 
+  it('has an Options button, left of the 15 steps button, that opens an options card', () => {
+    tableFor({ hands: ['3S 4S', '5H'] });
+    const buttons = Array.from(document.querySelectorAll('.topbar-buttons button')).map((b) => b.textContent);
+    expect(buttons.slice(0, 2)).toEqual(['Options', '15 steps']);
+    expect(screen.queryByRole('dialog', { name: 'Options' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Options' }));
+    expect(screen.getByRole('dialog', { name: 'Options' })).toBeTruthy();
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(screen.queryByRole('dialog', { name: 'Options' })).toBeNull();
+  });
+
+  it('the activity window can be turned off and on in Options, and the choice is remembered', () => {
+    tableFor({ hands: ['3S 4S', '5H'] });
+    expect(document.querySelector('.log')).not.toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Options' }));
+    fireEvent.click(screen.getByRole('checkbox', { name: /activity window/i }));
+    expect(document.querySelector('.log')).toBeNull();
+    expect(JSON.parse(localStorage.getItem('15steps.options.v1') ?? '{}')).toEqual({ showActivity: false, animations: true });
+    fireEvent.click(screen.getByRole('checkbox', { name: /activity window/i }));
+    expect(document.querySelector('.log')).not.toBeNull();
+  });
+
   it('opens from the right-click menu and lists every step', () => {
     tableFor({ hands: ['3S 4S', '5H'], steps: [4, 7] });
-    expect(screen.queryByRole('dialog', { name: 'The 15 steps' })).toBeNull();
+    expect(screen.queryByRole('dialog', { name: '15 steps' })).toBeNull();
     openFromMenu();
-    const card = screen.getByRole('dialog', { name: 'The 15 steps' });
+    const card = screen.getByRole('dialog', { name: '15 steps' });
     expect(screen.queryByRole('menu')).toBeNull(); // the menu closed itself
     const rows = within(card).getAllByRole('listitem');
     expect(rows).toHaveLength(15);
@@ -953,7 +976,7 @@ describe('the 15 steps pop-up', () => {
   it('highlights your step, dims the ones you have finished, and shows where each player is', () => {
     tableFor({ hands: ['3S 4S', '5H'], steps: [4, 7] });
     openFromMenu();
-    const card = screen.getByRole('dialog', { name: 'The 15 steps' });
+    const card = screen.getByRole('dialog', { name: '15 steps' });
     const rows = within(card).getAllByRole('listitem');
     expect(rows[3]?.getAttribute('aria-current')).toBe('step');
     expect(rows[3]?.classList.contains('current')).toBe(true);
@@ -966,14 +989,14 @@ describe('the 15 steps pop-up', () => {
   it('shows two players on the same step', () => {
     tableFor({ hands: ['3S', '5H'] });
     openFromMenu();
-    const first = within(screen.getByRole('dialog', { name: 'The 15 steps' })).getAllByRole('listitem')[0] as HTMLElement;
+    const first = within(screen.getByRole('dialog', { name: '15 steps' })).getAllByRole('listitem')[0] as HTMLElement;
     expect(within(first).getByText('Sam')).toBeTruthy();
     expect(within(first).getByText('Ada')).toBeTruthy();
   });
 
   it('closes with the Close button, Escape, or a click outside the card', () => {
     tableFor({ hands: ['3S 4S', '5H'] });
-    const isOpen = () => !!screen.queryByRole('dialog', { name: 'The 15 steps' });
+    const isOpen = () => !!screen.queryByRole('dialog', { name: '15 steps' });
     openFromMenu();
     fireEvent.click(screen.getByRole('button', { name: 'Close' }));
     expect(isOpen()).toBe(false);
@@ -981,7 +1004,7 @@ describe('the 15 steps pop-up', () => {
     fireEvent.keyDown(document, { key: 'Escape' });
     expect(isOpen()).toBe(false);
     openFromMenu();
-    fireEvent.click(screen.getByRole('dialog', { name: 'The 15 steps' })); // inside the card: stays open
+    fireEvent.click(screen.getByRole('dialog', { name: '15 steps' })); // inside the card: stays open
     expect(isOpen()).toBe(true);
     fireEvent.click(document.querySelector('.overlay') as Element); // the dark area outside it
     expect(isOpen()).toBe(false);
@@ -989,8 +1012,8 @@ describe('the 15 steps pop-up', () => {
 
   it('is also a link in the header', () => {
     tableFor({ hands: ['3S 4S', '5H'] });
-    fireEvent.click(screen.getByRole('button', { name: 'The 15 steps' }));
-    expect(screen.getByRole('dialog', { name: 'The 15 steps' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: '15 steps' }));
+    expect(screen.getByRole('dialog', { name: '15 steps' })).toBeTruthy();
   });
 });
 
@@ -1079,7 +1102,7 @@ describe('clicking empty board clears the selection', () => {
     press(centre());
     expect(selectedNow()).toEqual([]);
     clickCards('3S.1');
-    fireEvent.click(screen.getByRole('button', { name: 'The 15 steps' }));
+    fireEvent.click(screen.getByRole('button', { name: '15 steps' }));
     const overlay = document.querySelector('.overlay') as Element;
     press(overlay); // the dark area closes the pop-up but must not touch the selection
     expect(selectedNow()).toEqual(['3S']);
@@ -1546,7 +1569,7 @@ describe('the polished look', () => {
     it('the draw pile is a card back with the 15 emblem and a badge counting what is left', () => {
       show({ hands: ['3S', '5H', '3C'], stock: '5S.2 6S.2 7S.2 8S.2' });
       const back = document.querySelector('.piles .card.back') as HTMLElement;
-      expect(back.querySelector('.emblem')?.textContent).toBe('15');
+      expect(back.querySelector('.emblem')?.textContent).toBe('15steps');
       expect(back.querySelector('.badge')?.textContent).toBe('4');
     });
 
@@ -1566,25 +1589,25 @@ describe('the polished look', () => {
       show({ hands: ['3S', '5H', '3C'], scores: [0, 25, 10], current: 2 });
       const board = screen.getByLabelText('Scores');
       const rows = Array.from(board.querySelectorAll('li')).map((li) => li.textContent);
-      expect(rows).toEqual(['Sam0', 'Ada25', 'Ben10']);
-      expect(board.querySelector('li.turn')?.textContent).toBe('Ben10');
+      expect(rows).toEqual(['SamStep 10', 'AdaStep 125', 'BenStep 110']);
+      expect(board.querySelector('li.turn')?.textContent).toBe('BenStep 110');
       expect(board.textContent).toMatch(/Round 1/);
       expect(board.textContent).toMatch(/Lowest score wins/i);
     });
 
-    it('shows whose turn it is in a pill in the middle, once', () => {
+    it('shows whose turn it is in a pill at the bottom left, once', () => {
       show({ hands: ['3S', '5H', '3C'], current: 2 });
       const pills = document.querySelectorAll('.status-pill');
       expect(pills).toHaveLength(1);
       expect(pills[0]?.textContent).toBe("Ben's turn");
-      expect(document.querySelector('.center')?.contains(pills[0] as Node)).toBe(true);
+      expect(document.querySelector('.bottom')?.contains(pills[0] as Node)).toBe(true);
     });
 
-    it('each computer has a name pill, a card count that matches their hand, and a card back per card', () => {
+    it('each computer has a name pill and a card back per card in their hand', () => {
       show({ hands: ['3S', '5H 6H 7H', '3C 4C'] });
       const panels = Array.from(document.querySelectorAll('.opponent'));
       expect(panels.map((p) => p.querySelector('.name')?.textContent?.replace(/\s+/g, ' ').trim().split(' (')[0])).toEqual(['Ada', 'Ben']);
-      expect(panels.map((p) => p.querySelector('.card-count')?.textContent)).toEqual(['✋ 3', '✋ 2']);
+      expect(document.querySelector('.card-count')).toBeNull(); // the count is in the details line, not a separate badge
       expect(panels.map((p) => p.querySelectorAll('.back-card').length)).toEqual([3, 2]);
     });
 
@@ -1633,8 +1656,9 @@ describe('opponents show their step in full, and the table is arranged to fit', 
 
   it('each opponent’s panel says which step they are on and what it needs, like yours does', () => {
     show({ hands: ['3S', '5H', '3C'], steps: [1, 3, 9] });
-    expect(panel(0).querySelector('.opp-step')?.textContent?.trim()).toBe('Step 3: one run of 7');
-    expect(panel(1).querySelector('.opp-step')?.textContent?.trim()).toBe('Step 9: two runs of 3 + one set of 3');
+    // all in the pill in the bar across the top of the window
+    expect(panel(0).querySelector('.opp-bar .step-pill')?.textContent?.trim()).toBe('Step 3: one run of 7');
+    expect(panel(1).querySelector('.opp-bar .step-pill')?.textContent?.trim()).toBe('Step 9: two runs of 3 + one set of 3');
     expect(document.querySelector('.goal')?.textContent).toContain('Step 1:'); // yours, for comparison
   });
 
@@ -1643,13 +1667,13 @@ describe('opponents show their step in full, and the table is arranged to fit', 
       cleanup();
       show({ hands: ['3S', '5H', '3C'], steps: [1, step, 1] });
       const mine = describeStepText(step);
-      expect(panel(0).querySelector('.opp-step')?.textContent).toContain(mine);
+      expect(panel(0).querySelector('.opp-bar .step-pill')?.textContent).toContain(mine);
     }
   });
 
   it('shows a tick when they have laid down their base, and not before', () => {
     show({ hands: ['3S', '5H', '3C'], baseLaid: [false, true, false] });
-    expect(panel(0).querySelector('.base-down')?.textContent?.trim()).toBe('✓ base down');
+    expect(panel(0).querySelector('.opp-bar .base-down')?.textContent?.trim()).toBe('✓ base down');
     expect(panel(1).querySelector('.base-down')).toBeNull();
   });
 
@@ -1661,22 +1685,24 @@ describe('opponents show their step in full, and the table is arranged to fit', 
   it('also shows the step details when you are only watching', () => {
     const watchSeats = [{ name: 'Ada', kind: 'hard' as const }, { name: 'Ben', kind: 'medium' as const }];
     show({ hands: ['3S 4S', '5H'], steps: [7, 12] }, watchSeats);
-    expect(panel(0).querySelector('.opp-step')?.textContent?.trim()).toBe('Step 7: one set of 4 + one run of 3');
-    expect(panel(1).querySelector('.opp-step')?.textContent?.trim()).toBe('Step 12: one set of 3 + one run of 7');
+    expect(panel(0).querySelector('.opp-bar .step-pill')?.textContent?.trim()).toBe('Step 7: one set of 4 + one run of 3');
+    expect(panel(1).querySelector('.opp-bar .step-pill')?.textContent?.trim()).toBe('Step 12: one set of 3 + one run of 7');
   });
 
-  it('the piles and the melds sit side by side in one centred row, with whose turn it is below', () => {
+  it('the piles and the melds sit side by side in one centred row, with whose turn it is at the bottom left', () => {
     show({ hands: ['3S', '5H', '3C'], melds: [set(1, 1, 6, '6C 6D 6H.2')] });
     const board = document.querySelector('.center > .board') as HTMLElement;
     expect(board.querySelector('.piles')).toBeTruthy();
     expect(board.querySelector('.melds')).toBeTruthy();
-    expect(document.querySelector('.center > .status-pill')).toBeTruthy();
+    expect(document.querySelector('.bottom > .status-pill')).toBeTruthy();
   });
 
-  it('the activity card lives in the top bar, under the buttons, where it cannot cover anything', () => {
+  it('the activity card sits in the bottom row, to the right of your window, so it cannot cover anything', () => {
     show({ hands: ['3S', '5H', '3C'] });
-    const right = document.querySelector('.topbar > .topbar-right') as HTMLElement;
-    expect(right.querySelector('.topbar-buttons')).toBeTruthy();
-    expect(right.querySelector('.log')).toBeTruthy();
+    const bottom = document.querySelector('.bottom') as HTMLElement;
+    expect(bottom.querySelector('.mine')).toBeTruthy();
+    expect(bottom.querySelector('.log')).toBeTruthy();
+    expect(document.querySelector('.topbar .log')).toBeNull();
+    expect(document.querySelector('.topbar .topbar-buttons')).toBeTruthy();
   });
 });

@@ -119,7 +119,7 @@ The look is a friendly, "sticker" card-game style: a wooden-framed felt table, t
 ### Polish roadmap
 
 1. ~~Foundation: tokens, font, frame and felt, cards, buttons, pills, badges, panels, status pill, scoreboard.~~ _Done._
-2. Motion: dealing, drawing, discarding and laying melds animate; cards lift on hover; smooth turn changes.
+2. ~~Motion~~ _Done_ (`src/ui/motion.ts`): dealing, drawing, discarding, laying and building melds, undo and hand sorting animate, for you and the computers; "Animate the cards" is in Options and `prefers-reduced-motion` is respected.
 3. Chrome: a Menu button (steps, undo, new game) and a Sound button in the top corners; a polished setup screen and pop-ups; a window title and app icon.
 4. Sound and music with an off switch (already planned).
 5. Deck and table themes: a four-colour deck option, alternative card backs, felt colours.

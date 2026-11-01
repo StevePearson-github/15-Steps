@@ -1,12 +1,15 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import type { CSSProperties } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
-  type Action, type Card, FINAL_STEP, type Meld, type MeldSpec, extendMeld, findBase,
+  type Action, type Card, FINAL_STEP, type GameState, type Meld, type MeldSpec, extendMeld, findBase,
 } from '../engine';
 import { CardView } from './CardView';
 import { ContextMenu } from './ContextMenu';
 import { Hand, type HandHandle } from './Hand';
+import { fitToWindow, resetFit } from './fit';
+import { type Snapshot, captureCards, motionAvailable, playMotion } from './motion';
 import {
-  AVATARS, SORTERS, type Session, type SortDir, type SortKey, arrangeHand, baseFromSelection, canUndo,
+  AVATARS, SORTERS, loadUiOptions, saveUiOptions, sortHandSmart, type Session, type SortDir, type SortKey, arrangeHand, baseFromSelection, canUndo,
   describeSpec, describeStep, humanSeat, seatColor, meldOptions, moveCards, orderForBuild, stagedMeetBase, stepKinds, verb,
 } from './controller';
 
@@ -45,6 +48,30 @@ export function Table({ session, onAction, onNewGame, onUndo, watch }: TableProp
   const [order, setOrder] = useState<string[]>([]);
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
   const [showSteps, setShowSteps] = useState(false);
+  const [showOptions, setShowOptions] = useState(false);
+  const [options, setOptions] = useState(() => loadUiOptions());
+  useEffect(() => saveUiOptions(options), [options]);
+
+  // Card motion: note where every card is while rendering (the screen still shows the old layout),
+  // then animate whatever moved as soon as the new layout is in place.
+  const rootRef = useRef<HTMLDivElement>(null);
+  const motion = useRef<{ snap: Snapshot | null; prev: GameState | null }>({ snap: null, prev: null });
+  const animating = options.animations && motionAvailable();
+  motion.current.snap = animating && rootRef.current ? captureCards(rootRef.current) : null;
+  // Keep the table inside the window (see fit.ts). This runs before the motion effect, so cards are measured at their final size.
+  useLayoutEffect(() => fitToWindow());
+  useEffect(() => {
+    window.addEventListener('resize', fitToWindow);
+    return () => {
+      window.removeEventListener('resize', fitToWindow);
+      resetFit();
+    };
+  }, []);
+  useLayoutEffect(() => {
+    const m = motion.current;
+    if (animating && rootRef.current) playMotion({ root: rootRef.current, snap: m.snap, prev: m.prev, next: state, me });
+    m.prev = state;
+  });
   const [logOpen, setLogOpen] = useState(true);
   // Watching computers play: their hands are shown face-up unless you switch that off.
   const [showCards, setShowCards] = useState(true);
@@ -79,11 +106,15 @@ export function Table({ session, onAction, onNewGame, onUndo, watch }: TableProp
     setMessage('');
   };
   useEffect(() => {
-    if (!showSteps) return;
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setShowSteps(false);
+    if (!showSteps && !showOptions) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      setShowSteps(false);
+      setShowOptions(false);
+    };
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
-  }, [showSteps]);
+  }, [showSteps, showOptions]);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && !e.shiftKey && e.key.toLowerCase() === 'z') {
@@ -113,10 +144,15 @@ export function Table({ session, onAction, onNewGame, onUndo, watch }: TableProp
     setOrder([...moveCards(shown, group, insertAt), ...hidden]);
   };
   // Pressing the same sort link again flips between ascending and descending.
-  const [lastSort, setLastSort] = useState<{ key: SortKey; dir: SortDir } | null>(null);
+  const [lastSort, setLastSort] = useState<{ key: SortKey | 'smart'; dir: SortDir } | null>(null);
   const sortBy = (key: SortKey, dir: SortDir) => {
     setOrder(SORTERS[key](fullHand, dir).map((c) => c.id));
     setLastSort({ key, dir });
+  };
+  const smartSort = () => {
+    if (!player) return;
+    setOrder(sortHandSmart(fullHand, player.step, player.baseLaid).map((c) => c.id));
+    setLastSort({ key: 'smart', dir: 'asc' });
   };
   const sortLink = (key: SortKey) => sortBy(key, lastSort?.key === key && lastSort.dir === 'asc' ? 'desc' : 'asc');
   const arrow = (key: SortKey) => (lastSort?.key === key ? (lastSort.dir === 'asc' ? ' ↑' : ' ↓') : '');
@@ -196,7 +232,7 @@ export function Table({ session, onAction, onNewGame, onUndo, watch }: TableProp
       : `${myTurn ? 'Your' : `${seats[state.current]?.name}'s`} turn${myTurn ? (state.phase === 'draw' ? ' — draw a card' : ' — play, then discard') : ''}${watching && watch?.paused ? ' (paused)' : ''}`;
 
   return (
-    <div className="frame">
+    <div className="frame" ref={rootRef}>
     <div
       className="table"
       onPointerDown={(e) => {
@@ -226,6 +262,7 @@ export function Table({ session, onAction, onNewGame, onUndo, watch }: TableProp
               <li key={i} className={playing && state.current === i ? 'turn' : ''}>
                 <span className="dot" style={{ background: seatColor(i) }} />
                 <span className="sb-name">{seats[i]?.name}</span>
+                <span className="sb-step">Step {p.step}</span>
                 <b>{p.score}</b>
               </li>
             ))}
@@ -234,28 +271,10 @@ export function Table({ session, onAction, onNewGame, onUndo, watch }: TableProp
         </div>
         <div className="topbar-right">
           <div className="topbar-buttons">
-            <button type="button" onClick={() => setShowSteps(true)}>The 15 steps</button>
+            <button type="button" onClick={() => setShowOptions(true)}>Options</button>
+            <button type="button" onClick={() => setShowSteps(true)}>15 steps</button>
             <button type="button" className="danger" onClick={onNewGame}>{watching ? 'Stop watching' : 'New game'}</button>
           </div>
-          <section className={`log${logOpen ? '' : ' collapsed'}`} aria-label="Activity" aria-live="polite">
-            <div className="log-head">
-              <span>Activity</span>
-              <button
-                type="button"
-                className="log-toggle"
-                aria-label={logOpen ? 'Hide activity' : 'Show activity'}
-                aria-expanded={logOpen}
-                onClick={() => setLogOpen((o) => !o)}
-              >
-                {logOpen ? '–' : '+'}
-              </button>
-            </div>
-            <div className="log-lines">
-              {log.slice(logOpen ? -4 : -1).map((l, i, all) => (
-                <div key={`${log.length}-${i}`} className={i === all.length - 1 ? 'latest' : ''}>{l}</div>
-              ))}
-            </div>
-          </section>
         </div>
       </header>
 
@@ -274,34 +293,42 @@ export function Table({ session, onAction, onNewGame, onUndo, watch }: TableProp
         </section>
       )}
 
-      <section className="opponents" aria-label="Players">
+      <section className="opponents" aria-label="Players" data-count={watching && showCards ? undefined : state.players.length - (me >= 0 ? 1 : 0)}>
         {playerOrder.map((i) => {
           const p = state.players[i];
           if (!p) return null;
           const active = playing && state.current === i;
           return (
-            <div key={i} className={`opponent${active ? ' active' : ''}`} aria-current={active ? 'true' : undefined}>
-              <span className="pill tab name">
-                <span className="dot" style={{ background: seatColor(i) }} />
-                {seats[i]?.name} <small>({seats[i]?.kind})</small>
-                <span className="avatar" aria-hidden="true">{AVATARS[seats[i]?.kind ?? 'medium']}</span>
-              </span>
-              <div className="card-count" title={`${p.hand.length} cards in hand`}>✋ {p.hand.length}</div>
-              <div className="opp-step">
-                <strong>Step {p.step}:</strong> {describeStep(p.step)}
-                {p.baseLaid ? <span className="base-down"> ✓ base down</span> : null}
+            <div key={i} data-seat={i} className={`opponent${active ? ' active' : ''}`} aria-current={active ? 'true' : undefined}>
+              <div className="opp-bar">
+                <span className="pill tab name">
+                  <span className="dot" style={{ background: seatColor(i) }} />
+                  {seats[i]?.name} <small>({seats[i]?.kind})</small>
+                  <span className="avatar" aria-hidden="true">{AVATARS[seats[i]?.kind ?? 'medium']}</span>
+                </span>
+                <span className="pill step-pill" title={`Step ${p.step}: ${describeStep(p.step)}`}>
+                  <span className="step-text"><strong>Step {p.step}</strong><span className="pd">: {describeStep(p.step)}</span></span>
+                  {p.baseLaid ? <span className="base-down" title="Base is down">✓<span className="bd-text"> base down</span></span> : null}
+                </span>
               </div>
-              <div className="opp-meta">{p.score} pts · <span className="count">{p.hand.length} cards</span></div>
-              {active && <div className="turn-flag">▶ {state.phase === 'draw' ? 'Drawing' : 'Playing'}…</div>}
+              <div className="opp-desc" title={describeStep(p.step)}>{describeStep(p.step)}</div>
               {watching && showCards ? (
-                <div className="reveal-hand" aria-label={`${seats[i]?.name}'s cards`}>
+                <div className="reveal-hand" data-region={`reveal-${i}`} aria-label={`${seats[i]?.name}'s cards`}>
                   {arrangeHand(p.hand, []).map((c) => <CardView key={c.id} card={c} small />)}
                 </div>
               ) : (
-                <div className="back-fan" aria-hidden="true">
-                  {p.hand.map((c) => <span key={c.id} className="back-card" />)}
+                <div className="back-fan" aria-hidden="true" style={{ '--n': Math.max(p.hand.length - 1, 1) } as CSSProperties}>
+                  {p.hand.map((c, k) => (
+                    <span key={c.id} className="back-card">
+                      {k === p.hand.length - 1 && <span className="emblem"><b>15</b><i>steps</i></span>}
+                    </span>
+                  ))}
                 </div>
               )}
+              <div className="opp-meta">
+                <span>{p.score} pts · <span className="count">{p.hand.length} {p.hand.length === 1 ? 'card' : 'cards'}</span></span>
+                {active && <span className="turn-flag">▶ {state.phase === 'draw' ? 'Drawing' : 'Playing'}…</span>}
+              </div>
             </div>
           );
         })}
@@ -310,11 +337,11 @@ export function Table({ session, onAction, onNewGame, onUndo, watch }: TableProp
       <section className="center">
         <div className="board">
         <div className="piles">
-          <div>
+          <div data-region="draw">
             <CardView faceDown badge={state.stock.length} label={`Draw pile, ${state.stock.length} cards`} onClick={canDraw ? () => run({ type: 'drawStock' }) : undefined} />
             <div className="caption">Draw</div>
           </div>
-          <div>
+          <div data-region="discard">
             {top ? (
               <CardView card={top} onClick={canDraw ? () => run({ type: 'drawDiscard' }) : undefined} label="Take the discard" />
             ) : (
@@ -340,6 +367,7 @@ export function Table({ session, onAction, onNewGame, onUndo, watch }: TableProp
                       key={m.id}
                       className={`meld${targets.includes(m) ? ' fits' : ''}${onlyWay(m) ? ' clickable' : ''}`}
                       data-meld={m.id}
+                      data-region={`meld-${m.id}`}
                       onClick={() => {
                         const way = onlyWay(m);
                         if (way) build(m, way.side);
@@ -368,8 +396,9 @@ export function Table({ session, onAction, onNewGame, onUndo, watch }: TableProp
           })}
         </div>
         </div>
-        <div className="status-pill" aria-live="polite">{turnText}</div>
       </section>
+      <div className="bottom">
+        <div className="status-pill" aria-live="polite">{turnText}</div>
       {player && (
         <section className={`mine${myTurn ? ' active' : ''}`}>
           <span className="pill tab you">
@@ -377,61 +406,82 @@ export function Table({ session, onAction, onNewGame, onUndo, watch }: TableProp
             {seats[me]?.name} <span className="avatar" aria-hidden="true">{AVATARS.human}</span>
           </span>
           <div className="goal">
-            <strong>Step {player.step}:</strong> {describeStep(player.step)}
-            {player.baseLaid ? ' ✓ base down' : ''} · {player.score} pts
+            <span className="goal-step">
+              <strong>Step {player.step}:</strong> {describeStep(player.step)}
+              {player.baseLaid ? ' ✓ base down' : ''} · {player.score} pts
+            </span>
+            {canPlay && !player.baseLaid && (
+              <div className="staging">
+                <span>Base:</span>
+                {staged.length === 0 && <span className="hint">Select all your base cards and press “Lay down base”, or build it meld by meld with “Add as meld”.</span>}
+                {staged.map((s, i) => (
+                  <span key={i} className="staged">
+                    {describeSpec(s)}{' '}
+                    <button type="button" className="link" aria-label="remove" onClick={() => setStaged((x) => x.filter((_, j) => j !== i))}>×</button>
+                  </span>
+                ))}
+              </div>
+            )}
+            <span className="tip" title="Drag cards to arrange them, or drag on the table to select several. Right-click for more.">Drag to arrange · right-click for more</span>
+            {targets.length > 0 && (
+              <div className="add-hint" role="status">
+                {targets.length === 1 ? 'Your selected cards fit the gold meld on the table.' : `Your selected cards fit ${targets.length} gold melds on the table.`}{' '}
+                Click a gold meld, or press its add button, to play them there.
+              </div>
+            )}
           </div>
-
-          {canPlay && !player.baseLaid && (
-            <div className="staging">
-              <span>Base:</span>
-              {staged.length === 0 && <span className="hint">Select all your base cards and press “Lay down base”, or build it meld by meld with “Add as meld”.</span>}
-              {staged.map((s, i) => (
-                <span key={i} className="staged">
-                  {describeSpec(s)}{' '}
-                  <button type="button" className="link" aria-label="remove" onClick={() => setStaged((x) => x.filter((_, j) => j !== i))}>×</button>
-                </span>
-              ))}
-            </div>
-          )}
-
-          {targets.length > 0 && (
-            <div className="add-hint" role="status">
-              {targets.length === 1 ? 'Your selected cards fit the gold meld on the table.' : `Your selected cards fit ${targets.length} gold melds on the table.`}{' '}
-              Click a gold meld, or press its add button, to play them there.
-            </div>
-          )}
           <Hand ref={handRef} cards={hand} selected={selected} canSelect onToggle={toggle} onSelect={setSelected} onMove={move} />
           <div className="sort-row">
-            <span className="hint">Drag cards to arrange them. Drag on the table to select several, then drag them together.</span>
-            <button type="button" className="link" onClick={() => sortLink('suit')}>Sort by suit{arrow('suit')}</button>
-            <button type="button" className="link" onClick={() => sortLink('rank')}>Sort by rank{arrow('rank')}</button>
-            <button type="button" className="link" onClick={() => sortLink('sets')}>Sort by sets{arrow('sets')}</button>
-            <button type="button" className="link" onClick={() => sortLink('runs')}>Sort by runs{arrow('runs')}</button>
-            <span className="hint">(or right-click)</span>
+            <button type="button" className={`sort-btn smart${lastSort?.key === 'smart' ? ' on' : ''}`} onClick={smartSort}>Smart sort</button>
+            <button type="button" className={`sort-btn${lastSort?.key === 'suit' ? ' on' : ''}`} onClick={() => sortLink('suit')}>Sort by suit{arrow('suit')}</button>
+            <button type="button" className={`sort-btn${lastSort?.key === 'rank' ? ' on' : ''}`} onClick={() => sortLink('rank')}>Sort by rank{arrow('rank')}</button>
+            <button type="button" className={`sort-btn${lastSort?.key === 'sets' ? ' on' : ''}`} onClick={() => sortLink('sets')}>Sort by sets{arrow('sets')}</button>
+            <button type="button" className={`sort-btn${lastSort?.key === 'runs' ? ' on' : ''}`} onClick={() => sortLink('runs')}>Sort by runs{arrow('runs')}</button>
           </div>
 
-          {canPlay && (
-            <div className="actions">
-              {!player.baseLaid ? (
-                <>
-                  <button type="button" disabled={selectedCards.length < 2} onClick={stage}>Add as meld</button>
-                  <button type="button" onClick={suggest}>Suggest base</button>
-                  <button type="button" className="primary" disabled={!baseReady && !selectionBase} onClick={layBase}>Lay down base</button>
-                </>
-              ) : (
-                <button type="button" disabled={selectedCards.length < 3} onClick={layNow}>Lay down selected</button>
-              )}
-              <button type="button" disabled={selectedCards.length !== 1} onClick={() => run({ type: 'discard', cardId: selected[0] as string })}>
-                Discard selected
-              </button>
-              <button type="button" disabled={!undoable} onClick={doUndo} title="Take back your last play (Ctrl/Cmd+Z)">
-                Undo
-              </button>
-            </div>
-          )}
+          {/* Always shown so they never seem to come and go; they are greyed out until it is your turn and you have drawn. */}
+          <div className="actions">
+            {!player.baseLaid ? (
+              <>
+                <button type="button" disabled={!canPlay || selectedCards.length < 2} onClick={stage}>Add as meld</button>
+                <button type="button" disabled={!canPlay} onClick={suggest}>Suggest base</button>
+                <button type="button" className="primary" disabled={!canPlay || (!baseReady && !selectionBase)} onClick={layBase}>Lay down base</button>
+              </>
+            ) : (
+              <button type="button" disabled={!canPlay || selectedCards.length < 3} onClick={layNow}>Lay down selected</button>
+            )}
+            <button type="button" disabled={!canPlay || selectedCards.length !== 1} onClick={() => run({ type: 'discard', cardId: selected[0] as string })}>
+              Discard selected
+            </button>
+            <button type="button" disabled={!canPlay || !undoable} onClick={doUndo} title="Take back your last play (Ctrl/Cmd+Z)">
+              Undo
+            </button>
+          </div>
           {message && <p className="error" role="alert">{message}</p>}
         </section>
       )}
+        {options.showActivity && (
+        <section className={`log${logOpen ? '' : ' collapsed'}`} aria-label="Activity" aria-live="polite">
+          <div className="log-head">
+            <span>Activity</span>
+            <button
+              type="button"
+              className="log-toggle"
+              aria-label={logOpen ? 'Hide activity' : 'Show activity'}
+              aria-expanded={logOpen}
+              onClick={() => setLogOpen((o) => !o)}
+            >
+              {logOpen ? '–' : '+'}
+            </button>
+          </div>
+          <div className="log-lines">
+            {log.slice(logOpen ? -4 : -1).map((l, i, all) => (
+              <div key={`${log.length}-${i}`} className={i === all.length - 1 ? 'latest' : ''}>{l}</div>
+            ))}
+          </div>
+        </section>
+        )}
+      </div>
 
       {menu && (
         <ContextMenu
@@ -440,6 +490,7 @@ export function Table({ session, onAction, onNewGame, onUndo, watch }: TableProp
           title="Arrange your hand"
           onClose={() => setMenu(null)}
           items={[
+            { label: 'Smart sort', onSelect: smartSort },
             ...(['sets', 'runs', 'suit', 'rank'] as SortKey[]).map((key) => ({
               label: `Sort by ${key}`,
               children: [
@@ -454,10 +505,41 @@ export function Table({ session, onAction, onNewGame, onUndo, watch }: TableProp
         />
       )}
 
+      {showOptions && (
+        <div className="overlay" onClick={() => setShowOptions(false)}>
+          <div className="dialog options-card" role="dialog" aria-label="Options" onClick={(e) => e.stopPropagation()}>
+            <h2>Options</h2>
+            <label className="option-row">
+              <input
+                type="checkbox"
+                checked={options.showActivity}
+                onChange={(e) => setOptions({ ...options, showActivity: e.target.checked })}
+              />
+              <span>
+                <strong>Show the activity window</strong>
+                <span className="hint">A short log of recent plays, top right.</span>
+              </span>
+            </label>
+            <label className="option-row">
+              <input
+                type="checkbox"
+                checked={options.animations}
+                onChange={(e) => setOptions({ ...options, animations: e.target.checked })}
+              />
+              <span>
+                <strong>Animate the cards</strong>
+                <span className="hint">Cards glide, fly and flip into place.</span>
+              </span>
+            </label>
+            <button type="button" className="primary" onClick={() => setShowOptions(false)}>Close</button>
+          </div>
+        </div>
+      )}
+
       {showSteps && (
         <div className="overlay" onClick={() => setShowSteps(false)}>
-          <div className="dialog steps-card" role="dialog" aria-label="The 15 steps" onClick={(e) => e.stopPropagation()}>
-            <h2>The 15 steps</h2>
+          <div className="dialog steps-card" role="dialog" aria-label="15 steps" onClick={(e) => e.stopPropagation()}>
+            <h2>15 steps</h2>
             <p className="hint">Lay down each step's base to move on to the next. Lowest score wins once Step {FINAL_STEP} is done.</p>
             <ol className="steps-list">
               {Array.from({ length: FINAL_STEP }, (_, i) => i + 1).map((n) => {

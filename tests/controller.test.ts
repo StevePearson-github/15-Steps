@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
-  type Session, aiStep, apply, createSession, describeSpec, describeStep, deserializeSession,
-  DEFAULT_SETUP, SETUP_PREFS_KEY, loadSetupPrefs, saveSetupPrefs, sanitizeSetup, SORTERS, moveCards, verb, arrangeHand, baseFromSelection, canUndo, dropIndex, stepKinds, undo, humanSeat, makePlayers, meldOptions, moveCard, orderForBuild, serializeSession,
-  sortHand, sortHandByRank, sortHandByRuns, sortHandBySets, stagedMeetBase,
+  type Session, aiStep, apply, cardLabel, createSession, describeSpec, describeStep, deserializeSession,
+  DEFAULT_SETUP, SETUP_PREFS_KEY, loadUiOptions, saveUiOptions, sanitizeUiOptions, loadSetupPrefs, saveSetupPrefs, sanitizeSetup, SORTERS, moveCards, verb, arrangeHand, baseFromSelection, canUndo, dropIndex, stepKinds, undo, humanSeat, makePlayers, meldOptions, moveCard, orderForBuild, serializeSession,
+  sortHand, sortHandByRank, sortHandByRuns, sortHandBySets, sortHandSmart, stagedMeetBase,
 } from '../src/ui/controller';
-import type { MeldSpec } from '../src/engine';
+import type { Card, MeldSpec } from '../src/engine';
 import { cards, ids, run, scenario, set } from './helpers';
 
 const newSession = (seed = 4): Session =>
@@ -46,7 +46,19 @@ describe('sessions', () => {
     const bad = apply(s, { type: 'discard', cardId: 'nope' });
     expect(bad.ok).toBe(false);
     const good = apply(s, { type: 'drawStock' });
-    expect(good.ok && good.session.log.at(-1)).toMatch(/Sam took a card from the stock/);
+    // the human is told which card they drew
+    const drawn = good.ok ? good.session.state.players[0]?.hand.at(-1) : undefined;
+    expect(drawn).toBeTruthy();
+    expect(good.ok && good.session.log.at(-1)).toBe(`Sam drew ${cardLabel(drawn as Card)} from the stock.`);
+  });
+  it('a computer’s draw from the stock does not name the card, but a draw from the discard does', () => {
+    const s = newSession();
+    const ai = { ...s, state: { ...s.state, current: 1, phase: 'draw' as const } };
+    const fromStock = apply(ai, { type: 'drawStock' });
+    expect(fromStock.ok && fromStock.session.log.at(-1)).toBe('Ada drew a card from the stock.');
+    const top = ai.state.discard.at(-1) as Card;
+    const fromDiscard = apply(ai, { type: 'drawDiscard' });
+    expect(fromDiscard.ok && fromDiscard.session.log.at(-1)).toBe(`Ada drew ${cardLabel(top)} from the discard pile.`);
   });
   it('keeps the log short', () => {
     let s = newSession();
@@ -160,6 +172,28 @@ describe('sorting by sets and runs', () => {
   });
   it('sets: equal-sized groups go low to high', () => {
     expect(idsOf(sortHandBySets(cards('KH 4S KD 4D 8C 8S')))).toEqual(['4S', '4D', '8S', '8C', 'KH', 'KD']);
+  });
+  it('smart: the base first, then extra melds, then leftovers for the discard', () => {
+    const sorted = idsOf(sortHandSmart(cards('3C KH 5S 9C 7D 5H KS 9D JH 5D 9S KC'), 1, false));
+    const rankOf = (c?: string) => (c ?? '').slice(0, -1);
+    // three sets in the hand: two make the base, the third is an extra meld, all of them whole
+    for (const g of [sorted.slice(0, 3), sorted.slice(3, 6), sorted.slice(6, 9)]) expect(new Set(g.map(rankOf)).size).toBe(1);
+    expect(new Set(sorted.slice(0, 9).map(rankOf))).toEqual(new Set(['5', '9', 'K']));
+    expect(sorted.slice(9)).toEqual(['JH', '7D', '3C']); // what is left to discard, in suit order
+  });
+  it('smart: a base the hand cannot complete is built as far as it goes, wilds filling gaps', () => {
+    const sorted = idsOf(sortHandSmart(cards('KH 5S 9C 5H 3C 9D 4D X'), 1, false));
+    expect(sorted.slice(0, 5).sort()).toEqual(['5H', '5S', '9C', '9D', 'X']);
+    expect(sorted.slice(5)).toEqual(['KH', '4D', '3C']); // leftovers in suit order
+  });
+  it('smart: once the base is down, the hand is just extra melds then leftovers', () => {
+    const sorted = idsOf(sortHandSmart(cards('3C 5S 9D 5H 5D 8C 9C 9H'), 1, true));
+    expect(sorted.slice(6)).toEqual(['3C', '8C']);
+  });
+  it('smart: keeps every card exactly once', () => {
+    const hand = cards('3C KH 5S 9C 7D 5H KS 9D JH 5D 9S KC X 2H');
+    const sorted = sortHandSmart(hand, 3, false);
+    expect(sorted.map((c) => c.id).sort()).toEqual(hand.map((c) => c.id).sort());
   });
   it('runs: consecutive cards of one suit are lined up, longest first', () => {
     const sorted = idsOf(sortHandByRuns(cards('5H 9S 6H 7H 3S 4S 8H KC 5S X')));
@@ -402,6 +436,14 @@ describe('remembering the new-game settings', () => {
     return { data, getItem: (k: string) => data[k] ?? null, setItem: (k: string, v: string) => void (data[k] = v) };
   };
 
+  it('options: default to showing activity, remember a change, and ignore junk', () => {
+    const store = fakeStore();
+    expect(loadUiOptions(store)).toEqual({ showActivity: true, animations: true });
+    saveUiOptions({ showActivity: false, animations: true }, store);
+    expect(loadUiOptions(store)).toEqual({ showActivity: false, animations: true });
+    expect(sanitizeUiOptions({ showActivity: 'no' })).toEqual({ showActivity: true, animations: true });
+    expect(sanitizeUiOptions(null)).toEqual({ showActivity: true, animations: true });
+  });
   it('defaults to a 2-player game: you against one Medium computer', () => {
     expect(DEFAULT_SETUP).toEqual({ name: 'You', opponents: ['medium'], spectate: false });
     expect(loadSetupPrefs(fakeStore())).toEqual(DEFAULT_SETUP);

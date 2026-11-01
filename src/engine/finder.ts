@@ -276,3 +276,32 @@ export function baseDistance(hand: readonly Card[], step: number): number {
   const found = searchBase(hand, step, Infinity);
   return found ? Math.max(0, found.wilds - wildsIn(hand).length) : reqs.reduce((n, r) => n + r.size, 0);
 }
+
+/**
+ * The cards of a step's base as groups, one per meld: the whole base when the
+ * hand can make it, otherwise as much of it as the hand holds (wilds fill gaps
+ * while they last). Groups are in laying order, a wild sitting where it fills.
+ */
+export function closestBase(hand: readonly Card[], step: number): Card[][] {
+  const byId = new Map(hand.map((c) => [c.id, c]));
+  const reqs = stepRequirements(step);
+  if (reqs.every((r) => r.kind === 'pair')) {
+    for (let k = reqs.length; k >= 1; k--) {
+      const pairs = findPairs(hand, k);
+      if (pairs) return pairs.map((p) => p.cardIds.map((id) => byId.get(id) as Card));
+    }
+    return [];
+  }
+  const found = searchBase(hand, step, Infinity);
+  if (!found) return [];
+  const pool = wildsIn(hand);
+  const copies = copiesOf(hand);
+  let next = 0;
+  return found.chosen.map((cand) =>
+    cand.spec.cardIds.flatMap((id) => {
+      const real = id === WILD ? pool[next++]?.id : copies.get(id)?.shift();
+      const card = real ? byId.get(real) : undefined;
+      return card ? [card] : [];
+    }),
+  );
+}

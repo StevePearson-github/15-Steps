@@ -37,3 +37,9 @@ Three layers; each only depends on the one above it.
 - **UI tests lean on class names and text:** `.center`, `.piles`, `.board`, `.opponent`, `.hand`, `.meld`, `.log`, `.status-pill`; the strings "Your turn — draw a card" and "Round N" must stay unique on screen; `role="status"` is used by exactly one element at a time (`getByRole('status')`), so don't add another.
 - **Test helpers** (`tests/helpers.ts`): cards are tokens, `"5S"`, `"TH"`, `"X"` (joker); a second copy is `"5S.2"`. `scenario({...})` builds a game state directly (it does not keep the 108-card total). Property tests (fast-check) run with a **fresh random seed each time**: a rare failure is a real counterexample, so re-run with a larger `numRuns` to catch it, then add a regression test.
 - Verify UI changes in a real browser, not only jsdom. Tests can't see layout, overlap, or whether something is findable: use headless Chrome through `puppeteer-core` (install it in a scratch folder, not in this repo) against `npm run dev`.
+
+## Git workflow
+
+- **Never push directly to `main` or `master`.** Always push to a feature branch first; the owner reviews and merges it themselves.
+- Work in iterations and chunks, each on its own **feature branch** (e.g. `feature/sound`), created from an up-to-date `main`. Commit on the branch, push the branch, and stop there. Do not merge into `main`, and do not open or merge a PR unless asked.
+- Run `npm run typecheck` and `npm test` before committing.

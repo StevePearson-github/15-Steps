@@ -1,8 +1,8 @@
 import { createAI, type Difficulty, type Player } from '../ai/player';
 import {
   type Action, type Card, type GameEvent, type GameState, type Meld, type MeldSpec,
-  applyAction, buildMeld, createGame, extendMeld, findBase, isWild, meldsSatisfy, resolveMeld,
-  stepRequirements, viewFor,
+  applyAction, buildMeld, closestBase, createGame, extendMeld, extraMelds, findBase, isWild, meldsSatisfy, resolveMeld,
+  stepRequirements, viewFor, wildCount,
 } from '../engine';
 
 /**
@@ -121,7 +121,14 @@ function describeEvent(e: GameEvent, state: GameState, seats: Seat[]): string | 
     case 'roundStarted':
       return `Round ${e.round}. ${name(e.dealer)} ${verb(name(e.dealer), 'deal', 'deals')}.`;
     case 'cardDrawn':
-      return `${name(e.player)} took ${e.from === 'stock' ? 'a card from the stock' : 'the discard'}.`;
+    {
+      // The drawn card is the last one in hand. The discard is public, but a card from the stock is
+      // only named for the human: what a computer drew from the stock is its own secret.
+      const drawn = state.players[e.player]?.hand.at(-1);
+      const known = drawn && (e.from === 'discard' || seats[e.player]?.kind === 'human');
+      const what = known ? cardLabel(drawn) : e.from === 'stock' ? 'a card' : 'the discard';
+      return `${name(e.player)} drew ${what} from the ${e.from === 'stock' ? 'stock' : 'discard pile'}.`;
+    }
     case 'stockReshuffled':
       return 'The discards were shuffled into a new stock.';
     case 'baseLaid':
@@ -306,6 +313,35 @@ export function sortHandByRuns(hand: readonly Card[], dir: SortDir = 'asc'): Car
   return [...ordered, ...wildsLast(hand)];
 }
 
+/**
+ * Smart sort: line the hand up for the turn. First the cards of the step's
+ * base, as close to complete as the hand allows (skipped once the base is
+ * down). Then as many extra sets and runs as the rest of the hand can make,
+ * ones without wilds first. Whatever is left over, the discard candidates,
+ * goes last in suit order, with wilds at the very end.
+ */
+export function sortHandSmart(hand: readonly Card[], step: number, baseLaid: boolean): Card[] {
+  const groups: Card[][] = baseLaid ? [] : closestBase(hand, step);
+  let rest = hand.filter((c) => !groups.some((g) => g.includes(c)));
+  const take = (spec: { cardIds: string[] }) => {
+    const ids = new Set(spec.cardIds);
+    groups.push(rest.filter((c) => ids.has(c.id)).sort((a, b) => spec.cardIds.indexOf(a.id) - spec.cardIds.indexOf(b.id)));
+    rest = rest.filter((c) => !ids.has(c.id));
+  };
+  for (const allowWilds of [false, true]) {
+    for (;;) {
+      const options = extraMelds(rest)
+        .map((spec) => ({ spec, wilds: wildCount(spec, rest) }))
+        .filter((o) => (allowWilds ? o.wilds > 0 && o.spec.cardIds.length - o.wilds >= 2 : o.wilds === 0));
+      options.sort((a, b) => b.spec.cardIds.length - a.spec.cardIds.length || a.wilds - b.wilds);
+      const best = options[0];
+      if (!best) break;
+      take(best.spec);
+    }
+  }
+  return [...groups.flat(), ...sortHand(rest)];
+}
+
 export const SORTERS: Record<SortKey, (hand: readonly Card[], dir?: SortDir) => Card[]> = {
   sets: sortHandBySets,
   runs: sortHandByRuns,
@@ -428,6 +464,43 @@ export function loadSetupPrefs(store: Store | null = defaultStore()): SetupPrefs
 export function saveSetupPrefs(prefs: SetupPrefs, store: Store | null = defaultStore()): void {
   try {
     store?.setItem(SETUP_PREFS_KEY, JSON.stringify(sanitizeSetup(prefs)));
+  } catch {
+    /* the game still works, it just won't remember */
+  }
+}
+
+// ---- Options (the Options window): kept across games ----
+
+export interface UiOptions {
+  /** Show the Activity window (the log of recent plays) in the top right. */
+  showActivity: boolean;
+  /** Cards glide, fly and flip into place. */
+  animations: boolean;
+}
+export const DEFAULT_UI_OPTIONS: UiOptions = { showActivity: true, animations: true };
+export const UI_OPTIONS_KEY = '15steps.options.v1';
+
+/** Turn whatever was stored into valid options, using the default for anything wrong or missing. */
+export function sanitizeUiOptions(raw: unknown): UiOptions {
+  const r = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>;
+  return {
+    showActivity: typeof r.showActivity === 'boolean' ? r.showActivity : DEFAULT_UI_OPTIONS.showActivity,
+    animations: typeof r.animations === 'boolean' ? r.animations : DEFAULT_UI_OPTIONS.animations,
+  };
+}
+
+export function loadUiOptions(store: Store | null = defaultStore()): UiOptions {
+  try {
+    const text = store?.getItem(UI_OPTIONS_KEY);
+    return sanitizeUiOptions(text ? JSON.parse(text) : null);
+  } catch {
+    return { ...DEFAULT_UI_OPTIONS };
+  }
+}
+
+export function saveUiOptions(options: UiOptions, store: Store | null = defaultStore()): void {
+  try {
+    store?.setItem(UI_OPTIONS_KEY, JSON.stringify(sanitizeUiOptions(options)));
   } catch {
     /* the game still works, it just won't remember */
   }

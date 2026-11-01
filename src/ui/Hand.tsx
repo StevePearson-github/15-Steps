@@ -176,6 +176,8 @@ export const Hand = forwardRef<HandHandle, HandProps>(function Hand({ cards, sel
     <div
       className={`hand${drag ? ' dragging-active' : ''}`}
       ref={rowRef}
+      data-region="hand"
+      style={{ '--n': Math.max(cards.length - 1, 1) } as React.CSSProperties}
       role="group"
       aria-label="Your hand"
       onPointerDown={(e) => {
