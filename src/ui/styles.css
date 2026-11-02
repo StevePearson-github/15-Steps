@@ -582,3 +582,21 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
 .board { flex: 1 1 auto; min-height: 0; }
 .piles { flex: none; }
 .melds { align-self: stretch; align-content: safe center; max-height: 100%; overflow-y: auto; overflow-x: hidden; padding: 8px 6px 22px; scrollbar-width: thin; }
+
+/* One or two opponents: on a window wide enough, float the scoreboard in the corner too, so it stops taking a row of its own
+   and the opponent and the table get that height back (this is what keeps a crowded table from needing a scroll bar). */
+@media (min-width: 1240px) {
+  .table:has(.opponents[data-count='1']), .table:has(.opponents[data-count='2']) { --sb-w: 218px; }
+  .table:has(.opponents[data-count='1']) .scoreboard, .table:has(.opponents[data-count='2']) .scoreboard {
+    position: absolute; top: 10px; left: 16px; z-index: 3; width: var(--sb-w); min-width: 0;
+  }
+  .table:has(.opponents[data-count='1']) .opponents, .table:has(.opponents[data-count='2']) .opponents { margin-left: calc(var(--sb-w) + 6px); padding-top: 0; margin-top: 24px; }
+  .table:has(.opponents[data-count='1']) .topbar, .table:has(.opponents[data-count='2']) .topbar { justify-content: flex-end; }
+}
+
+/* The piles (and their captions) are never squeezed: the middle is at least as tall as they are. */
+.center { min-height: calc(var(--pile-h) + 46px); }
+/* A short window gives a lone opponent a smaller window, so the table keeps its room. */
+@media (max-height: 900px) {
+  .opponents[data-count='1'] { --opp-s: 1; --opp-back: 0.6; --opp-max: 700px; }
+}
