@@ -603,3 +603,25 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
 
 /* Melds on the table shrink a little (see fit.ts) when there are too many to fit; --meld-scale is 1 normally. */
 .melds { --small-w: calc(var(--card-w) * 0.84 * var(--meld-scale, 1)); --small-h: calc(var(--small-w) * 1.414); }
+
+/* The carousel's middle window sits in the true middle (see the spacer in Table.tsx). */
+.opp-spacer { min-width: 0; pointer-events: none; }
+
+/* A wide window, you playing against one or two computers: the middle window rises to the top of the table, in line with the menu
+   buttons (there is room either side of it), and the smaller windows sit lower, under the button bar. */
+@media (min-width: 1700px) {
+  .table:has(.opponents[data-carousel][data-count='2']):not(:has(.watch-bar)),
+  .table:has(.opponents[data-carousel][data-count='3']):not(:has(.watch-bar)) {
+    --raise: 1;
+  }
+  .table:has(.opponents[data-carousel][data-count='2']):not(:has(.watch-bar)) .topbar,
+  .table:has(.opponents[data-carousel][data-count='3']):not(:has(.watch-bar)) .topbar {
+    position: absolute; top: 10px; left: 16px; right: 16px; height: 0; z-index: 4; pointer-events: none;
+  }
+  .table:has(.opponents[data-carousel][data-count='2']):not(:has(.watch-bar)) .topbar > *,
+  .table:has(.opponents[data-carousel][data-count='3']):not(:has(.watch-bar)) .topbar > * { pointer-events: auto; }
+  .table:has(.opponents[data-carousel][data-count='2']):not(:has(.watch-bar)) .opponents,
+  .table:has(.opponents[data-carousel][data-count='3']):not(:has(.watch-bar)) .opponents { margin: 0 0 0 calc(var(--sb-w, 218px) * 0); padding-top: 0; }
+  .table:has(.opponents[data-carousel][data-count='2']):not(:has(.watch-bar)) .opponent.side,
+  .table:has(.opponents[data-carousel][data-count='3']):not(:has(.watch-bar)) .opponent.side { margin-top: 68px; }
+}

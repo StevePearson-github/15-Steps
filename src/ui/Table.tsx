@@ -352,6 +352,8 @@ export function Table({ session, onAction, onNewGame, onUndo, watch, speed, soun
       </header>
 
       <section className="opponents" aria-label="Players" data-count={Math.min(playerOrder.length, 5)} data-carousel={carousel ? 1 : undefined}>
+        {/* The middle window stays in the exact middle: an empty spacer fills in for any side window the other side has and this one lacks. */}
+        {carousel && shown.indexOf(focus) < shown.length - 1 - shown.indexOf(focus) && <div className="opp-spacer" aria-hidden="true" style={{ flex: `${shown.length - 1 - 2 * shown.indexOf(focus)} 1 0`, maxWidth: 290 * (shown.length - 1 - 2 * shown.indexOf(focus)) }} />}
         {shown.map((i) => {
           const p = state.players[i];
           if (!p) return null;
@@ -391,6 +393,7 @@ export function Table({ session, onAction, onNewGame, onUndo, watch, speed, soun
             </div>
           );
         })}
+        {carousel && shown.indexOf(focus) > shown.length - 1 - shown.indexOf(focus) && <div className="opp-spacer" aria-hidden="true" style={{ flex: `${2 * shown.indexOf(focus) - (shown.length - 1)} 1 0`, maxWidth: 290 * (2 * shown.indexOf(focus) - (shown.length - 1)) }} />}
       </section>
 
       <section className="center">
