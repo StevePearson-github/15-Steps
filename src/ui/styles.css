@@ -668,3 +668,16 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
   .table:has(.opponents[data-carousel][data-count='2']):not(:has(.watch-bar)) .center,
   .table:has(.opponents[data-carousel][data-count='3']):not(:has(.watch-bar)) .center { padding-left: 0; }
 }
+
+/* Short windows: the start screen (with "Continue saved game" showing) must fit without a scroll bar. */
+@media (max-height: 760px) {
+  .setup { margin: 2.5vh auto; }
+  .setup h1 { font-size: 3rem; }
+  .tagline { margin: 2px 0 12px; }
+  .setup fieldset { gap: 10px; margin-top: 14px; padding: 14px 20px 16px; }
+}
+/* ...and in a short window that is also wide enough, the Sound card sits beside New game instead of under it, so even five opponents fit. */
+@media (max-height: 760px) and (min-width: 900px) {
+  .setup { max-width: 940px; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 24px; align-items: start; }
+  .setup > h1, .setup > .tagline, .setup > button { grid-column: 1 / -1; justify-self: center; }
+}
