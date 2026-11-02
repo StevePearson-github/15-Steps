@@ -576,3 +576,9 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
 /* The turn bubble sits in the true middle of the hand panel, not the leftover space between its neighbours. */
 .goal { position: relative; }
 .goal .status-pill.in-hand { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); margin: 0; max-width: 60%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* The middle never scrolls as a whole: the piles stay put and only the melds scroll when there are too many to fit. */
+.center { overflow: hidden; }
+.board { flex: 1 1 auto; min-height: 0; }
+.piles { flex: none; }
+.melds { align-self: stretch; align-content: safe center; max-height: 100%; overflow-y: auto; overflow-x: hidden; padding: 8px 6px 22px; scrollbar-width: thin; }
