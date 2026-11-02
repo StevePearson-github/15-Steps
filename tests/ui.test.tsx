@@ -147,6 +147,15 @@ describe('playing a turn', () => {
     expect(actions[0]?.type).toBe('layBase');
   });
 
+  it('Suggest base works before you draw (it only selects; laying down waits for the draw)', () => {
+    tableFor({ hands: ['7S 7H 7D 8S 8H 8D 4C 9C', '5H 6H'], phase: 'draw' });
+    const suggest = screen.getByRole('button', { name: 'Suggest base' }) as HTMLButtonElement;
+    expect(suggest.disabled).toBe(false);
+    fireEvent.click(suggest);
+    expect(document.querySelectorAll('.hand .card[aria-pressed="true"]')).toHaveLength(6);
+    expect((screen.getByRole('button', { name: 'Lay down base' }) as HTMLButtonElement).disabled).toBe(true);
+  });
+
   it('an error message goes away at the next click anywhere, e.g. on a sort button', () => {
     tableFor({ hands: ['7S 8H 9D 3S 4H 6D JC KC', '5H 6H'] });
     fireEvent.click(screen.getByRole('button', { name: 'Suggest base' }));
@@ -166,7 +175,7 @@ describe('playing a turn', () => {
   it('says so when there is no base to suggest, and selects nothing', () => {
     tableFor({ hands: ['7S 8H 9D 3S 4H 6D JC KC', '5H 6H'] });
     fireEvent.click(screen.getByRole('button', { name: 'Suggest base' }));
-    expect(screen.getByRole('alert').textContent).toMatch(/No base to suggest/);
+    expect(screen.getByRole('alert').textContent).toMatch(/No base to suggest yet: you are missing \d+ cards?\./);
     expect(document.querySelectorAll('.hand .card[aria-pressed="true"]')).toHaveLength(0);
   });
 

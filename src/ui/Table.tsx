@@ -1,7 +1,7 @@
 import type { CSSProperties } from 'react';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
-  type Action, type Card, FINAL_STEP, type GameState, type Meld, type MeldSpec, extendMeld, findBase,
+  type Action, type Card, FINAL_STEP, type GameState, type Meld, type MeldSpec, extendMeld, baseDistance, findBase,
 } from '../engine';
 import { CardView } from './CardView';
 import { ContextMenu } from './ContextMenu';
@@ -217,7 +217,8 @@ export function Table({ session, onAction, onNewGame, onUndo, watch, speed, soun
   const suggest = () => {
     const base = findBase(fullHand, player?.step ?? 1);
     if (!base) {
-      setMessage('No base to suggest yet.');
+      const missing = baseDistance(fullHand, player?.step ?? 1);
+      setMessage(missing > 0 ? `No base to suggest yet: you are missing ${missing} ${missing === 1 ? 'card' : 'cards'}.` : 'No base to suggest yet.');
       return;
     }
     setStaged([]);
@@ -532,8 +533,8 @@ export function Table({ session, onAction, onNewGame, onUndo, watch, speed, soun
             {!player.baseLaid ? (
               <>
                 <button type="button" disabled={!canPlay || selectedCards.length < 2} onClick={stage}>Add as meld</button>
-                <button type="button" disabled={!canPlay} onClick={suggest}>Suggest base</button>
-                <button type="button" className="primary" disabled={!canPlay || (!baseReady && !selectionBase)} onClick={layBase}>Lay down base</button>
+                <button type="button" disabled={!myTurn} onClick={suggest}>Suggest base</button>
+                <button type="button" className="primary" disabled={!canPlay || (!baseReady && !selectionBase)} title={myTurn && state.phase === 'draw' ? 'Draw a card first, then you can lay your base down' : undefined} onClick={layBase}>Lay down base</button>
               </>
             ) : (
               <button type="button" disabled={!canPlay || selectedCards.length < 3} onClick={layNow}>Lay down selected</button>
