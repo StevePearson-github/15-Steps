@@ -165,6 +165,7 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
 /* Whoever is taking their turn glows and grows a little; this moves from player to player. */
 .opponent.active { opacity: 1; border-color: var(--yellow); transform: scale(1.03); box-shadow: 0 0 22px rgba(255, 210, 63, 0.55), inset 0 0 0 1.5px rgba(255, 255, 255, 0.1); }
 .opponent .tab, .step-pill { font-size: calc(0.95rem * var(--opp-s, 1)); }
+.step-pill { font-size: calc(0.95rem * var(--opp-s, 1) * var(--pill-k, 1)); }
 .tab { position: absolute; top: -17px; left: 12px; font-size: 0.95rem; }
 /* The bar across the top edge of an opponent's window: who they are on the left, which step and whether the base is down on the right. */
 .opp-bar { position: absolute; top: -17px; left: 12px; right: 12px; display: flex; justify-content: space-between; align-items: center; gap: 8px; }

@@ -18,7 +18,20 @@ const overflows = (): boolean => {
 /** If overlapping is not enough, the cards in the melds shrink a little (never below about two thirds), loosest first. */
 const SCALES = [1, 0.9, 0.8, 0.7, 0.62];
 
+/** A step's description that would be cut off ("Step 6: two sets of 3 + o…") gets a smaller font until it fits, down to about two thirds. */
+function fitStepText(): void {
+  for (const pill of document.querySelectorAll<HTMLElement>('.step-pill')) {
+    const text = pill.querySelector<HTMLElement>('.step-text');
+    if (!text) continue;
+    for (let k = 1; k >= 0.64; k -= 0.04) {
+      pill.style.setProperty('--pill-k', String(Math.round(k * 100) / 100));
+      if (text.scrollWidth <= text.clientWidth + 1) break;
+    }
+  }
+}
+
 export function fitToWindow(): void {
+  fitStepText();
   const root = document.documentElement.style;
   const tries: [number, number][] = [];
   for (const scale of SCALES) for (const overlap of OVERLAPS.slice(0, 4)) tries.push([scale, overlap]);
