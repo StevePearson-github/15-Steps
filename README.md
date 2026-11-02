@@ -4,9 +4,7 @@ A digital version of the family card game **15 Steps**: a Liverpool-style rummy 
 
 Play against computer players (Easy, Medium or Hard), or sit back and watch the computers play each other.
 
-![15 Steps on a Mac: a round against Ada, with her melds on the table and your hand along the bottom](docs/screenshots/mac-table.png)
-
-![15 Steps on Windows: a round against Ada, with melds on the table and your hand along the bottom](docs/screenshots/windows-table.png)
+![15 Steps: a round against Ada, with her melds on the table and your hand along the bottom](docs/screenshots/mac-table.png)
 
 ## Download
 
@@ -61,7 +59,7 @@ The full rules are in [RULES.md](RULES.md). In short:
 
 ## Where the game comes from
 
-15 Steps is a family variant of the **contract rummy** family (also known as Liverpool rummy, Shanghai rummy and other names), where each round has a different contract. The usual versions have about seven rounds; this one has fifteen. We haven't found it written down under the name "15 Steps", so if you know where your family learned it, we'd love to hear.
+15 Steps is a family variant of the **contract rummy** family (also known as Liverpool rummy, Shanghai rummy and other names), where each round has a different contract. The usual versions have about seven rounds; this one has fifteen. We haven't found it written down under the name "15 Steps", so if you know anything more about the origin of this 15-step version, we'd love to hear from you.
 
 ## Building from source
 
@@ -99,4 +97,6 @@ See [DESIGN.md](DESIGN.md) for the design decisions, the visual design system an
 
 ## License
 
-Not yet chosen.
+[MIT](LICENSE): free to use, copy, change and share, including in your own projects, as long as the copyright notice stays with it.
+
+The bundled [Fredoka](https://github.com/hafontia/Fredoka-One) font is under the SIL Open Font License 1.1.
