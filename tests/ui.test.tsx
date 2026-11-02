@@ -1524,9 +1524,9 @@ describe('watching the computers play', () => {
       localStorage.removeItem('15steps.speed.v1');
       await startWatching();
       const label = () => document.querySelector('.speed-label')?.textContent;
-      expect(label()).toBe('1×');
+      expect(label()).toBe('0.7×');
       fireEvent.click(screen.getByRole('button', { name: 'Faster' }));
-      expect(label()).toBe('1.5×');
+      expect(label()).toBe('1×');
       for (let i = 0; i < 6; i++) fireEvent.click(screen.getByRole('button', { name: 'Faster' }));
       expect((screen.getByRole('button', { name: 'Faster' }) as HTMLButtonElement).disabled).toBe(true); // at the fastest
       for (let i = 0; i < 6; i++) fireEvent.click(screen.getByRole('button', { name: 'Slower' }));

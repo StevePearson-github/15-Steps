@@ -499,7 +499,7 @@ describe('watching speed', () => {
   it('labels each level as a multiple of normal speed, with 1× in the default place', async () => {
     const { SPEED_FACTORS, DEFAULT_SPEED, speedLabel } = await import('../src/ui/controller');
     expect(SPEED_FACTORS.map((_, i) => speedLabel(i))).toEqual(['0.5×', '0.7×', '1×', '1.5×', '2.9×', '6.7×']);
-    expect(speedLabel(DEFAULT_SPEED)).toBe('1×');
+    expect(speedLabel(DEFAULT_SPEED)).toBe('0.7×');
     expect([...SPEED_FACTORS]).toEqual([...SPEED_FACTORS].sort((a, b) => b - a)); // slower to faster
   });
 

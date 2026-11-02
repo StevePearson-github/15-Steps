@@ -546,9 +546,9 @@ export function deserializeSession(text: string): Session | null {
 
 // ---- Watching speed ----
 
-/** How long a computer's move takes, as a multiple of the normal pace: bigger is slower. Index 2 is normal. */
+/** How long a computer's move takes, as a multiple of the normal pace: bigger is slower. Index 2 is the old "normal" 1×; the default is index 1 (0.7×). */
 export const SPEED_FACTORS = [2.2, 1.5, 1, 0.65, 0.35, 0.15] as const;
-export const DEFAULT_SPEED = 2;
+export const DEFAULT_SPEED = 1; // 0.7×
 /** The label shown beside the arrows: 1× is normal, 3× is three times as fast. */
 export const speedLabel = (index: number): string => {
   const x = 1 / (SPEED_FACTORS[index] ?? 1);
