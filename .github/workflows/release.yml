@@ -6,7 +6,6 @@ name: Release
 on:
   push:
     tags: ["v*"]
-    branches: [feature/release-1.0] # TEMP dry run
   workflow_dispatch:
 
 permissions:
