@@ -309,6 +309,7 @@ export function Table({ session, onAction, onNewGame, onUndo, watch, speed, soun
     >
       <header className="topbar">
         <div className="scoreboard" aria-label="Scores">
+          <div className="logo" aria-hidden="true">15 Steps</div>
           <strong>Round {state.round}</strong>
           <ul>
             {state.players.map((p, i) => (

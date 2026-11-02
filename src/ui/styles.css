@@ -405,7 +405,8 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
 .option-row { display: flex; gap: 12px; align-items: flex-start; cursor: pointer; }
 .option-row input { width: 1.4em; height: 1.4em; margin-top: 0.1em; accent-color: var(--yellow); flex: none; }
 .option-row span { display: grid; gap: 2px; }
-.steps-card { min-width: min(92vw, 440px); }
+.steps-card { min-width: min(92vw, 600px); }
+.steps-list li > :nth-child(2) { white-space: nowrap; }
 .steps-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 3px; }
 .steps-list li { display: grid; grid-template-columns: 2.2em 1fr auto; gap: 10px; align-items: center; padding: 5px 10px; border-radius: 12px; }
 .steps-list li.done { opacity: 0.5; }
@@ -626,3 +627,13 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
   .table:has(.opponents[data-carousel][data-count='2']):not(:has(.watch-bar)) .opponent.side,
   .table:has(.opponents[data-carousel][data-count='3']):not(:has(.watch-bar)) .opponent.side { margin-top: 68px; }
 }
+
+/* The game's title, small and bright, above the scoreboard in the top-left corner. */
+.logo {
+  position: absolute; top: -39px; left: 0; right: 0; text-align: center; z-index: 5; pointer-events: none; user-select: none;
+  font-size: 1.75rem; font-weight: 700; line-height: 1; letter-spacing: 0.02em; color: var(--yellow);
+  transform: rotate(-3deg);
+  -webkit-text-stroke: 3px var(--ink); paint-order: stroke fill;
+  text-shadow: 0 3px 0 var(--ink), 0 6px 10px rgba(0, 0, 0, 0.35);
+}
+.scoreboard { margin-top: 34px; position: relative; }
