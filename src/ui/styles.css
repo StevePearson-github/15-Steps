@@ -600,3 +600,6 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
 @media (max-height: 900px) {
   .opponents[data-count='1'] { --opp-s: 1; --opp-back: 0.6; --opp-max: 700px; }
 }
+
+/* Melds on the table shrink a little (see fit.ts) when there are too many to fit; --meld-scale is 1 normally. */
+.melds { --small-w: calc(var(--card-w) * 0.84 * var(--meld-scale, 1)); --small-h: calc(var(--small-w) * 1.414); }
