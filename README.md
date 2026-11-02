@@ -59,7 +59,7 @@ The full rules are in [RULES.md](RULES.md). In short:
 
 ## Where the game comes from
 
-15 Steps is a family variant of the **contract rummy** family (also known as Liverpool rummy, Shanghai rummy and other names), where each round has a different contract. The usual versions have about seven rounds; this one has fifteen. We haven't found it written down under the name "15 Steps", so if you know where your family learned it, we'd love to hear.
+15 Steps is a family variant of the **contract rummy** family (also known as Liverpool rummy, Shanghai rummy and other names), where each round has a different contract. The usual versions have about seven rounds; this one has fifteen. We haven't found it written down under the name "15 Steps", so if you know anything more about the origin of this 15-step version, we'd love to hear from you.
 
 ## Building from source
 
