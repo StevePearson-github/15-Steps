@@ -447,11 +447,11 @@ describe('remembering the new-game settings', () => {
 
   it('options: default to showing activity, remember a change, and ignore junk', () => {
     const store = fakeStore();
-    expect(loadUiOptions(store)).toEqual({ showActivity: true, animations: true });
-    saveUiOptions({ showActivity: false, animations: true }, store);
     expect(loadUiOptions(store)).toEqual({ showActivity: false, animations: true });
-    expect(sanitizeUiOptions({ showActivity: 'no' })).toEqual({ showActivity: true, animations: true });
-    expect(sanitizeUiOptions(null)).toEqual({ showActivity: true, animations: true });
+    saveUiOptions({ showActivity: true, animations: true }, store);
+    expect(loadUiOptions(store)).toEqual({ showActivity: true, animations: true });
+    expect(sanitizeUiOptions({ showActivity: 'no' })).toEqual({ showActivity: false, animations: true });
+    expect(sanitizeUiOptions(null)).toEqual({ showActivity: false, animations: true });
   });
   it('defaults to a 2-player game: you against one Medium computer', () => {
     expect(DEFAULT_SETUP).toEqual({ name: 'You', opponents: ['medium'], spectate: false });

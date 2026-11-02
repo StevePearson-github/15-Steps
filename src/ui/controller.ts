@@ -495,7 +495,7 @@ export interface UiOptions {
   /** Cards glide, fly and flip into place. */
   animations: boolean;
 }
-export const DEFAULT_UI_OPTIONS: UiOptions = { showActivity: true, animations: true };
+export const DEFAULT_UI_OPTIONS: UiOptions = { showActivity: false, animations: true };
 export const UI_OPTIONS_KEY = '15steps.options.v1';
 
 /** Turn whatever was stored into valid options, using the default for anything wrong or missing. */

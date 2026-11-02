@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { App } from '../src/ui/App';
 import { Setup } from '../src/ui/Setup';
 import { describeStep as describeStepText } from '../src/ui/controller';
@@ -976,13 +976,13 @@ describe('the 15 steps pop-up', () => {
 
   it('the activity window can be turned off and on in Options, and the choice is remembered', () => {
     tableFor({ hands: ['3S 4S', '5H'] });
-    expect(document.querySelector('.log')).not.toBeNull();
+    expect(document.querySelector('.log')).toBeNull(); // off unless the player turns it on
     fireEvent.click(screen.getByRole('button', { name: 'Options' }));
     fireEvent.click(screen.getByRole('checkbox', { name: /activity window/i }));
-    expect(document.querySelector('.log')).toBeNull();
-    expect(JSON.parse(localStorage.getItem('15steps.options.v1') ?? '{}')).toEqual({ showActivity: false, animations: true });
-    fireEvent.click(screen.getByRole('checkbox', { name: /activity window/i }));
     expect(document.querySelector('.log')).not.toBeNull();
+    expect(JSON.parse(localStorage.getItem('15steps.options.v1') ?? '{}')).toEqual({ showActivity: true, animations: true });
+    fireEvent.click(screen.getByRole('checkbox', { name: /activity window/i }));
+    expect(document.querySelector('.log')).toBeNull();
   });
 
   it('opens from the right-click menu and lists every step', () => {
@@ -1457,6 +1457,7 @@ describe('watching the computers play', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Start game' }));
       await screen.findByRole('region', { name: 'Watching controls' });
     };
+    beforeEach(showLog);
     const logText = () => document.querySelector('.log')?.textContent ?? '';
     const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -1525,7 +1526,10 @@ describe('watching the computers play', () => {
   });
 });
 
+const showLog = () => localStorage.setItem('15steps.options.v1', JSON.stringify({ showActivity: true, animations: true }));
+
 describe('the activity card', () => {
+  beforeEach(showLog);
   const lines = () => Array.from(document.querySelectorAll('.log-lines div')).map((e) => e.textContent);
   const withLog = (log: string[]) => {
     const session: Session = { state: scenario({ phase: 'play', hands: ['3S 4S', '5H'] }), seats, log, undoStack: [] };
@@ -1756,6 +1760,7 @@ describe('opponents show their step in full, and the table is arranged to fit', 
   });
 
   it('the activity card sits at the bottom left, beside your window, so it cannot cover anything', () => {
+    showLog();
     show({ hands: ['3S', '5H', '3C'] });
     const bottom = document.querySelector('.bottom') as HTMLElement;
     expect(bottom.querySelector('.mine')).toBeTruthy();
