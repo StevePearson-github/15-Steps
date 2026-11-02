@@ -6,9 +6,7 @@ Play against computer players (Easy, Medium or Hard), or sit back and watch the 
 
 ![15 Steps on a Mac: a round against Ada, with her melds on the table and your hand along the bottom](docs/screenshots/mac-table.png)
 
-<!-- Windows screenshot: add docs/screenshots/windows-table.png, then replace the line below with
-![15 Steps on Windows](docs/screenshots/windows-table.png) -->
-_Windows screenshot coming soon._
+![15 Steps on Windows: a round against Ada, with melds on the table and your hand along the bottom](docs/screenshots/windows-table.png)
 
 ## Download
 

@@ -196,10 +196,10 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
 /* With one or two opponents there is room to put the cards beside the details instead of under them. */
 @media (min-width: 1000px) {
   .opponents[data-count='1'] .opponent, .opponents[data-count='2'] .opponent {
-    display: grid; grid-template-columns: minmax(0, 1fr) calc(var(--back-w) * 5.7); grid-template-rows: auto auto; align-content: center; column-gap: 20px; align-items: center;
+    display: grid; grid-template-columns: auto calc(var(--back-w) * 5.7); justify-content: center; grid-template-rows: auto auto; align-content: center; column-gap: 40px; align-items: center;
   }
   .opponents[data-count='1'] .opp-meta, .opponents[data-count='2'] .opp-meta { grid-column: 1; grid-row: 1; align-self: center; flex-wrap: wrap; font-size: calc(1.1rem * var(--opp-s, 1)); }
-  .opponents[data-count='1'] .back-fan, .opponents[data-count='2'] .back-fan { grid-column: 2; grid-row: 1; margin-top: 0; }
+  .opponents[data-count='1'] .back-fan, .opponents[data-count='2'] .back-fan { grid-column: 2; grid-row: 1; margin-top: 0; justify-content: center; }
 }
 
 /* Watching: everyone's cards face-up */
@@ -325,10 +325,10 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
   position: relative; display: flex; justify-content: center; flex-wrap: nowrap; min-height: var(--card-h);
   padding-top: calc(var(--card-lift) + 2px); user-select: none; -webkit-user-select: none;
 }
-/* Cards overlap a little (their corner indexes stay readable) so a full hand fits on one row. */
+/* Cards overlap only a sliver when there is room; the overlap grows (their corner indexes stay readable) so a full hand always fits on one row. */
 .hand { container-type: inline-size; }
-/* Cards overlap by a fifth of a card; with a lot of cards in a narrow window they overlap more (up to two thirds). The hand never wraps, so it is always one row. */
-.hand .card + .card { margin-left: max(calc(var(--card-w) * -0.66), min(calc(var(--card-w) * -0.2), calc((100cqw - var(--card-w) - 3px) / var(--n, 12) - var(--card-w)))); }
+/* Cards overlap by 6% of a card when there is room; with a lot of cards in a narrow window they overlap more (up to two thirds). The hand never wraps, so it is always one row. */
+.hand .card + .card { margin-left: max(calc(var(--card-w) * -0.66), min(calc(var(--card-w) * -0.06), calc((100cqw - var(--card-w) - 3px) / var(--n, 12) - var(--card-w)))); }
 .hand .card { touch-action: none; user-select: none; -webkit-user-select: none; }
 .hand .card:hover { z-index: 3; }
 .hand.dragging-active .card:not(.dragging) { transition: transform 0.16s ease-out; }
@@ -354,7 +354,7 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
 /* ---- The bottom row: your window in the middle, the activity card in the bottom right ---- */
 
 .bottom { margin-top: auto; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 12px; align-items: end; }
-.bottom .mine { grid-column: 2; width: 100%; max-width: calc(var(--card-w) * 13.5 + 80px); justify-self: center; margin-top: 0; }
+.bottom .mine { grid-column: 2; width: 100%; max-width: max(calc(var(--card-w) * 13.5 + 80px), 1180px); justify-self: center; margin-top: 0; } /* never narrower than the button row needs, or it wraps and pushes the panel off the bottom */
 /* The activity card sits low in the bottom-left corner, out of the way. */
 .bottom .log { grid-column: 1; grid-row: 1; width: 190px; max-width: 190px; align-self: end; font-size: 0.82rem; }
 .bottom .log.collapsed { width: auto; }
@@ -434,6 +434,11 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
 }
 @media (max-width: 600px) {
   .opponent { flex: 1 1 100%; max-width: none; }
+}
+
+/* Very short windows (a 1080p screen at 150% scaling leaves ~670 CSS px): smaller cards, so the hand and buttons still fit on screen. */
+@media (max-height: 720px) {
+  :root { --card-w: clamp(56px, min(11.4vh, 8.4vw), 170px); }
 }
 
 /* Short windows (a laptop): trim the top bar so the whole table fits without scrolling. */
@@ -524,7 +529,7 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
 
 /* One opponent: the details keep their width and the fan takes what is left, so they never overlap. */
 @media (min-width: 1000px) {
-  .opponents[data-count='1'] .opponent { grid-template-columns: max-content minmax(0, calc(var(--back-w) * 5.7)); justify-content: space-between; }
+  .opponents[data-count='1'] .opponent { grid-template-columns: max-content minmax(0, calc(var(--back-w) * 5.7)); justify-content: center; }
 }
 
 /* Three or more opponents: the scoreboard floats in the top-left corner and the carousel sits beside it (and just under the menu buttons),
@@ -637,3 +642,37 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
   text-shadow: 0 3px 0 var(--ink), 0 6px 10px rgba(0, 0, 0, 0.35);
 }
 .scoreboard { margin-top: 34px; position: relative; }
+
+/* Watching (no human seat): the watch controls start to the right of the title and the score box, and shrink to fit beside the speed and menu buttons. */
+.topbar:has(.watch-bar) { padding-left: calc(var(--sb-w, 218px) + 8px); }
+.topbar .watch-bar { gap: 4px; padding: 3px 6px; font-size: 0.72rem; flex: none; margin-right: 4px; }
+.topbar .watch-bar button { font-size: 0.8rem; padding: 0.1em 0.55em; border-width: 2px; }
+.topbar-buttons button { white-space: nowrap; }
+
+/* Short windows: the 15-steps list is compact enough that all fifteen steps show without scrolling. */
+@media (max-height: 760px) {
+  .steps-card { padding: 14px 20px; gap: 8px; }
+  .steps-list { gap: 0; }
+  .steps-list li { padding: 2px 10px; }
+  .steps-card h2 { font-size: 1.3rem; }
+  .steps-card .hint { font-size: 0.85rem; }
+}
+
+/* The piles and melds share the opponents' centre line: wherever the opponent row is pushed right to make room for the
+   floating score box, the middle row gets the same offset, so the melds sit centred under the opponent and not under the table. */
+.table:has(.opponents[data-count='3']) .center, .table:has(.opponents[data-count='4']) .center, .table:has(.opponents[data-count='5']) .center { padding-left: calc(var(--sb-w) + 6px); }
+@media (min-width: 1240px) {
+  .table:has(.opponents[data-count='1']) .center, .table:has(.opponents[data-count='2']) .center { padding-left: calc(var(--sb-w) + 6px); }
+}
+@media (min-width: 1700px) {
+  .table:has(.opponents[data-carousel][data-count='2']):not(:has(.watch-bar)) .center,
+  .table:has(.opponents[data-carousel][data-count='3']):not(:has(.watch-bar)) .center { padding-left: 0; }
+}
+
+/* Short windows: the start screen (with "Continue saved game" showing) must fit without a scroll bar. */
+@media (max-height: 760px) {
+  .setup { margin: 2.5vh auto; }
+  .setup h1 { font-size: 3rem; }
+  .tagline { margin: 2px 0 12px; }
+  .setup fieldset { gap: 10px; margin-top: 14px; padding: 14px 20px 16px; }
+}
