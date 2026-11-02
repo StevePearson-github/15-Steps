@@ -196,10 +196,10 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
 /* With one or two opponents there is room to put the cards beside the details instead of under them. */
 @media (min-width: 1000px) {
   .opponents[data-count='1'] .opponent, .opponents[data-count='2'] .opponent {
-    display: grid; grid-template-columns: minmax(0, 1fr) calc(var(--back-w) * 5.7); grid-template-rows: auto auto; align-content: center; column-gap: 20px; align-items: center;
+    display: grid; grid-template-columns: auto calc(var(--back-w) * 5.7); justify-content: center; grid-template-rows: auto auto; align-content: center; column-gap: 40px; align-items: center;
   }
   .opponents[data-count='1'] .opp-meta, .opponents[data-count='2'] .opp-meta { grid-column: 1; grid-row: 1; align-self: center; flex-wrap: wrap; font-size: calc(1.1rem * var(--opp-s, 1)); }
-  .opponents[data-count='1'] .back-fan, .opponents[data-count='2'] .back-fan { grid-column: 2; grid-row: 1; margin-top: 0; }
+  .opponents[data-count='1'] .back-fan, .opponents[data-count='2'] .back-fan { grid-column: 2; grid-row: 1; margin-top: 0; justify-content: center; }
 }
 
 /* Watching: everyone's cards face-up */
@@ -529,7 +529,7 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
 
 /* One opponent: the details keep their width and the fan takes what is left, so they never overlap. */
 @media (min-width: 1000px) {
-  .opponents[data-count='1'] .opponent { grid-template-columns: max-content minmax(0, calc(var(--back-w) * 5.7)); justify-content: space-between; }
+  .opponents[data-count='1'] .opponent { grid-template-columns: max-content minmax(0, calc(var(--back-w) * 5.7)); justify-content: center; }
 }
 
 /* Three or more opponents: the scoreboard floats in the top-left corner and the carousel sits beside it (and just under the menu buttons),
