@@ -1,0 +1,24 @@
+[package]
+name = "fifteen-steps"
+version = "1.0.0"
+description = "A digital version of the family card game 15 Steps"
+edition = "2021"
+rust-version = "1.77"
+
+[lib]
+# The lib/cdylib/staticlib layout is what Tauri's Android and iOS builds need later.
+name = "fifteen_steps_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+
+[profile.release]
+opt-level = "s"
+lto = true
+codegen-units = 1
+strip = true
+panic = "abort"

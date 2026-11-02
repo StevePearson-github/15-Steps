@@ -123,7 +123,7 @@ The look is a friendly, "sticker" card-game style: a wooden-framed felt table, t
 3. Chrome: a Menu button (steps, undo, new game) and a Sound button in the top corners; a polished setup screen and pop-ups; a window title and app icon.
 4. Sound and music with an off switch (already planned).
 5. Deck and table themes: a four-colour deck option, alternative card backs, felt colours.
-6. Packaging for Mac, Windows and Linux.
+6. Packaging: Mac and Windows done in 1.0.0 (Tauri, see RELEASING.md); Linux and Android to come.
 
 ## Decisions (Confirmed)
 

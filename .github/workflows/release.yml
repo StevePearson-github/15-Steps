@@ -1,0 +1,106 @@
+name: Release
+
+# Pushing a tag like v1.0.0 tests the game, builds the Mac and Windows apps, and creates a DRAFT
+# GitHub release with everything attached. Review the draft, then publish it by hand.
+# "Run workflow" on a branch does a dry run: it builds everything but creates no release.
+on:
+  push:
+    tags: ["v*"]
+    branches: [feature/release-1.0] # TEMP dry run
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: Tag must match the version in package.json and Cargo.toml
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          pkg=$(node -p "require('./package.json').version")
+          cargo=$(sed -n 's/^version = "\(.*\)"/\1/p' src-tauri/Cargo.toml | head -1)
+          echo "tag=${GITHUB_REF_NAME} package.json=${pkg} Cargo.toml=${cargo}"
+          [ "${GITHUB_REF_NAME}" = "v${pkg}" ] && [ "${pkg}" = "${cargo}" ]
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+
+  build:
+    needs: verify
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - os: macos-latest
+            name: mac
+            args: --target universal-apple-darwin --bundles dmg
+            rust-targets: aarch64-apple-darwin,x86_64-apple-darwin
+          - os: windows-latest
+            name: windows
+            args: --bundles nsis
+            rust-targets: ""
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.rust-targets }}
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+      - run: npm ci
+      - run: npm run tauri -- build ${{ matrix.args }}
+
+      - name: Collect Mac files
+        if: matrix.name == 'mac'
+        shell: bash
+        run: |
+          v=$(node -p "require('./package.json').version")
+          mkdir out
+          cp src-tauri/target/universal-apple-darwin/release/bundle/dmg/*.dmg "out/15-Steps-${v}-mac-universal.dmg"
+      - name: Collect Windows files
+        if: matrix.name == 'windows'
+        shell: bash
+        run: |
+          v=$(node -p "require('./package.json').version")
+          mkdir out
+          # The installer, and the bare exe: the game is embedded in it, so it runs from anywhere with no install.
+          cp src-tauri/target/release/bundle/nsis/*-setup.exe "out/15-Steps-${v}-windows-setup.exe"
+          cp src-tauri/target/release/fifteen-steps.exe "out/15-Steps-${v}-windows-portable.exe"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.name }}
+          path: out/*
+          if-no-files-found: error
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+      - name: Source archive (GitHub also adds its own automatic source zip/tarball)
+        run: git archive --format=zip --prefix="15-steps-${GITHUB_REF_NAME#v}/" -o "artifacts/15-Steps-${GITHUB_REF_NAME#v}-source.zip" HEAD
+      - name: Checksums
+        run: cd artifacts && sha256sum * > SHA256SUMS.txt
+      - name: Create draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" artifacts/* \
+            --draft --verify-tag --title "15 Steps ${GITHUB_REF_NAME#v}" --generate-notes
