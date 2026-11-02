@@ -35,6 +35,8 @@ export function App({ aiDelayMs = 700 }: { aiDelayMs?: number }) {
   const saved = useMemo(loadSaved, []);
   // Watching only: hold the computers still so you can study the table.
   const [paused, setPaused] = useState(false);
+  // New game was clicked mid-game: the setup screen is showing, but the game underneath is kept so Back to game can return to it.
+  const [settingUp, setSettingUp] = useState(false);
   // Watching: how fast the computers play (and how fast the cards fly), changed with the arrows beside Pause.
   const [speed, setSpeed] = useState(() => loadSpeed());
   const factor = SPEED_FACTORS[speed] ?? 1;
@@ -73,6 +75,7 @@ export function App({ aiDelayMs = 700 }: { aiDelayMs?: number }) {
     const s = createSession(opts);
     players.current = makePlayers(s.seats, opts.seed);
     setPaused(false);
+    setSettingUp(false);
     setSession(s);
   };
 
@@ -98,7 +101,7 @@ export function App({ aiDelayMs = 700 }: { aiDelayMs?: number }) {
 
   // Computer players move on a timer, so a person can follow the game. Pausing stops the timer.
   useEffect(() => {
-    if (!session || paused) return;
+    if (!session || paused || settingUp) return;
     const { state, seats } = session;
     if (state.phase === 'gameOver') return;
     const watching = humanSeat(session) < 0;
@@ -111,9 +114,17 @@ export function App({ aiDelayMs = 700 }: { aiDelayMs?: number }) {
     if (delay === null) return;
     const timer = setTimeout(advance, delay);
     return () => clearTimeout(timer);
-  }, [session, aiDelayMs, paused, factor]);
+  }, [session, aiDelayMs, paused, settingUp, factor]);
 
-  if (!session) return <Setup sound={{ settings: sound, onChange: setSound }} onStart={start} {...(saved ? { onContinue: resume } : {})} />;
+  if (!session || settingUp) {
+    return (
+      <Setup
+        sound={{ settings: sound, onChange: setSound }}
+        onStart={start}
+        {...(session ? { onCancel: () => setSettingUp(false) } : saved ? { onContinue: resume } : {})}
+      />
+    );
+  }
 
   const onAction = (action: Action): string | null => {
     const r = apply(session, action);
@@ -127,10 +138,7 @@ export function App({ aiDelayMs = 700 }: { aiDelayMs?: number }) {
       session={session}
       sound={{ settings: sound, onChange: setSound }}
       onAction={onAction}
-      onNewGame={() => {
-        setPaused(false);
-        setSession(null);
-      }}
+      onNewGame={() => setSettingUp(true)}
       onUndo={() => setSession((s) => (s ? undo(s) : s))}
       speed={{
         label: speedLabel(speed),
