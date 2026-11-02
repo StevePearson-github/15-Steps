@@ -1,7 +1,7 @@
 import type { CSSProperties } from 'react';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
-  type Action, type Card, FINAL_STEP, type GameState, type Meld, type MeldSpec, extendMeld, findBase,
+  type Action, type Card, FINAL_STEP, type GameState, type Meld, type MeldSpec, extendMeld, baseDistance, findBase,
 } from '../engine';
 import { CardView } from './CardView';
 import { ContextMenu } from './ContextMenu';
@@ -217,7 +217,8 @@ export function Table({ session, onAction, onNewGame, onUndo, watch, speed, soun
   const suggest = () => {
     const base = findBase(fullHand, player?.step ?? 1);
     if (!base) {
-      setMessage('No base to suggest yet.');
+      const missing = baseDistance(fullHand, player?.step ?? 1);
+      setMessage(missing > 0 ? `No base to suggest yet: you are missing ${missing} ${missing === 1 ? 'card' : 'cards'}.` : 'No base to suggest yet.');
       return;
     }
     setStaged([]);

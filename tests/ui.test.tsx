@@ -175,7 +175,7 @@ describe('playing a turn', () => {
   it('says so when there is no base to suggest, and selects nothing', () => {
     tableFor({ hands: ['7S 8H 9D 3S 4H 6D JC KC', '5H 6H'] });
     fireEvent.click(screen.getByRole('button', { name: 'Suggest base' }));
-    expect(screen.getByRole('alert').textContent).toMatch(/No base to suggest/);
+    expect(screen.getByRole('alert').textContent).toMatch(/No base to suggest yet: you are missing \d+ cards?\./);
     expect(document.querySelectorAll('.hand .card[aria-pressed="true"]')).toHaveLength(0);
   });
 
