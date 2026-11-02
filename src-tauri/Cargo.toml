@@ -1,6 +1,6 @@
 [package]
 name = "fifteen-steps"
-version = "1.0.1"
+version = "1.0.2"
 description = "A digital version of the family card game 15 Steps"
 license = "MIT"
 edition = "2021"
