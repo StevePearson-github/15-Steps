@@ -533,7 +533,7 @@ export function Table({ session, onAction, onNewGame, onUndo, watch, speed, soun
               <>
                 <button type="button" disabled={!canPlay || selectedCards.length < 2} onClick={stage}>Add as meld</button>
                 <button type="button" disabled={!myTurn} onClick={suggest}>Suggest base</button>
-                <button type="button" className="primary" disabled={!canPlay || (!baseReady && !selectionBase)} onClick={layBase}>Lay down base</button>
+                <button type="button" className="primary" disabled={!canPlay || (!baseReady && !selectionBase)} title={myTurn && state.phase === 'draw' ? 'Draw a card first, then you can lay your base down' : undefined} onClick={layBase}>Lay down base</button>
               </>
             ) : (
               <button type="button" disabled={!canPlay || selectedCards.length < 3} onClick={layNow}>Lay down selected</button>
