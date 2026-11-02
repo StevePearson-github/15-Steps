@@ -325,10 +325,10 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
   position: relative; display: flex; justify-content: center; flex-wrap: nowrap; min-height: var(--card-h);
   padding-top: calc(var(--card-lift) + 2px); user-select: none; -webkit-user-select: none;
 }
-/* Cards overlap a little (their corner indexes stay readable) so a full hand fits on one row. */
+/* Cards overlap only a sliver when there is room; the overlap grows (their corner indexes stay readable) so a full hand always fits on one row. */
 .hand { container-type: inline-size; }
-/* Cards overlap by a fifth of a card; with a lot of cards in a narrow window they overlap more (up to two thirds). The hand never wraps, so it is always one row. */
-.hand .card + .card { margin-left: max(calc(var(--card-w) * -0.66), min(calc(var(--card-w) * -0.2), calc((100cqw - var(--card-w) - 3px) / var(--n, 12) - var(--card-w)))); }
+/* Cards overlap by 6% of a card when there is room; with a lot of cards in a narrow window they overlap more (up to two thirds). The hand never wraps, so it is always one row. */
+.hand .card + .card { margin-left: max(calc(var(--card-w) * -0.66), min(calc(var(--card-w) * -0.06), calc((100cqw - var(--card-w) - 3px) / var(--n, 12) - var(--card-w)))); }
 .hand .card { touch-action: none; user-select: none; -webkit-user-select: none; }
 .hand .card:hover { z-index: 3; }
 .hand.dragging-active .card:not(.dragging) { transition: transform 0.16s ease-out; }
