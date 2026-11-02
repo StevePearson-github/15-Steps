@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { App } from '../src/ui/App';
 import { Setup } from '../src/ui/Setup';
 import { describeStep as describeStepText } from '../src/ui/controller';
-import { SETUP_PREFS_KEY, type SetupOptions } from '../src/ui/controller';
+import { SESSION_SAVE_KEY, SETUP_PREFS_KEY, type SetupOptions } from '../src/ui/controller';
 import { Table } from '../src/ui/Table';
 import { useState } from 'react';
 import { type Action, applyAction } from '../src/engine';
@@ -85,6 +85,25 @@ describe('starting a game', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Continue saved game' }));
     await waitFor(() => screen.getByText(/draw a card/));
     expect(document.querySelectorAll('.hand .card')).toHaveLength(13);
+  });
+
+  it('lets you cancel New game and go back to the game you were playing', async () => {
+    vi.spyOn(Math, 'random').mockReturnValue(0.5);
+    render(<App aiDelayMs={0} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Start game' }));
+    await waitFor(() => screen.getByText(/draw a card/));
+    fireEvent.click(document.querySelector('.piles .card.back') as HTMLElement); // draw, so we can tell it is the same game afterwards
+    await waitFor(() => expect(document.querySelectorAll('.hand .card')).toHaveLength(14));
+    fireEvent.click(screen.getByRole('button', { name: 'New game' }));
+    expect(screen.queryByRole('button', { name: 'Continue saved game' })).toBeNull();
+    expect(localStorage.getItem(SESSION_SAVE_KEY)).not.toBeNull(); // the game is not thrown away just by looking at the setup screen
+    fireEvent.click(screen.getByRole('button', { name: 'Back to game' }));
+    await waitFor(() => expect(document.querySelectorAll('.hand .card')).toHaveLength(14));
+  });
+
+  it('has no Back to game button when there is no game to go back to', () => {
+    render(<App aiDelayMs={0} />);
+    expect(screen.queryByRole('button', { name: 'Back to game' })).toBeNull();
   });
 
   it('can watch computers play a round without a human', async () => {

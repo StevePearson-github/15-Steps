@@ -8,10 +8,12 @@ const LEVELS: Difficulty[] = ['easy', 'medium', 'hard'];
 interface SetupProps {
   onStart: (opts: SetupOptions) => void;
   onContinue?: () => void;
+  /** Set when a game is already under way: go back to it instead of starting a new one. */
+  onCancel?: () => void;
   sound?: SoundProps;
 }
 
-export function Setup({ onStart, onContinue, sound }: SetupProps) {
+export function Setup({ onStart, onContinue, onCancel, sound }: SetupProps) {
   // Start from whatever was used last time (a 2-player game against Medium the first time).
   const [prefs, setPrefs] = useState<SetupPrefs>(() => loadSetupPrefs());
   const { name, opponents, spectate } = prefs;
@@ -27,6 +29,11 @@ export function Setup({ onStart, onContinue, sound }: SetupProps) {
     <main className="setup">
       <h1>15 Steps</h1>
       <p className="tagline">Complete all 15 steps with the lowest score.</p>
+      {onCancel && (
+        <button type="button" className="primary" onClick={onCancel}>
+          Back to game
+        </button>
+      )}
       {onContinue && (
         <button type="button" className="primary" onClick={onContinue}>
           Continue saved game
