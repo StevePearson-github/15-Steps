@@ -532,7 +532,7 @@ export function Table({ session, onAction, onNewGame, onUndo, watch, speed, soun
             {!player.baseLaid ? (
               <>
                 <button type="button" disabled={!canPlay || selectedCards.length < 2} onClick={stage}>Add as meld</button>
-                <button type="button" disabled={!canPlay} onClick={suggest}>Suggest base</button>
+                <button type="button" disabled={!myTurn} onClick={suggest}>Suggest base</button>
                 <button type="button" className="primary" disabled={!canPlay || (!baseReady && !selectionBase)} onClick={layBase}>Lay down base</button>
               </>
             ) : (
