@@ -626,3 +626,13 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
   .table:has(.opponents[data-carousel][data-count='2']):not(:has(.watch-bar)) .opponent.side,
   .table:has(.opponents[data-carousel][data-count='3']):not(:has(.watch-bar)) .opponent.side { margin-top: 68px; }
 }
+
+/* The game's title, small and bright, above the scoreboard in the top-left corner. */
+.logo {
+  position: absolute; top: 6px; left: 20px; z-index: 5; pointer-events: none; user-select: none;
+  font-size: 1.75rem; font-weight: 700; line-height: 1; letter-spacing: 0.02em; color: var(--yellow);
+  transform: rotate(-3deg); transform-origin: left center;
+  -webkit-text-stroke: 3px var(--ink); paint-order: stroke fill;
+  text-shadow: 0 3px 0 var(--ink), 0 6px 10px rgba(0, 0, 0, 0.35);
+}
+.scoreboard { margin-top: 34px; }

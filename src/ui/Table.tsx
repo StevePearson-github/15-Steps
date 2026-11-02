@@ -307,6 +307,7 @@ export function Table({ session, onAction, onNewGame, onUndo, watch, speed, soun
         setMenu({ x: e.clientX, y: e.clientY });
       }}
     >
+      <div className="logo" aria-hidden="true">15 Steps</div>
       <header className="topbar">
         <div className="scoreboard" aria-label="Scores">
           <strong>Round {state.round}</strong>
