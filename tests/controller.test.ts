@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   type Session, aiStep, apply, cardLabel, createSession, describeSpec, describeStep, deserializeSession,
-  DEFAULT_SETUP, SETUP_PREFS_KEY, loadUiOptions, saveUiOptions, sanitizeUiOptions, loadSetupPrefs, saveSetupPrefs, sanitizeSetup, SORTERS, moveCards, verb, arrangeHand, baseFromSelection, canUndo, dropIndex, stepKinds, undo, humanSeat, makePlayers, meldOptions, moveCard, orderForBuild, serializeSession,
+  DEFAULT_SETUP, SETUP_PREFS_KEY, loadUiOptions, saveUiOptions, sanitizeUiOptions, loadSetupPrefs, saveSetupPrefs, sanitizeSetup, SORTERS, moveCards, verb, arrangeHand, baseChoices, baseFromSelection, canUndo, dropIndex, stepKinds, undo, humanSeat, makePlayers, meldOptions, moveCard, orderForBuild, serializeSession,
   sortHand, sortHandByRank, sortHandByRuns, sortHandBySets, sortHandSmart, stagedMeetBase,
 } from '../src/ui/controller';
 import type { Card, MeldSpec } from '../src/engine';
@@ -325,6 +325,15 @@ describe('sort directions', () => {
 });
 
 describe('laying the base from a selection', () => {
+  it('offers both readings of a run that ends in a wild (10-J-Q + joker is 9-Q or 10-K)', () => {
+    const choices = baseChoices(cards('TD JD QD X 3C X X 6C'), 8);
+    expect(choices).not.toBeNull();
+    expect(choices).toHaveLength(2);
+    const diamonds = (choices ?? []).find((c) => c.some((m) => m.kind === 'run' && m.suit === 'D'));
+    expect(diamonds?.map((m) => (m.kind === 'run' ? m.start : 0)).sort((x, y) => x - y)).toEqual([9, 10]);
+    // the 3-4-5-6 run has only one reading
+    expect((choices ?? []).find((c) => c.some((m) => m.kind === 'run' && m.suit === 'C'))).toHaveLength(1);
+  });
   it('finds the base among exactly the selected cards, wilds included', () => {
     const sel = cards('7S 9S 9H X 2C 2D');
     expect(baseFromSelection(sel, 1)).not.toBeNull();
@@ -438,11 +447,11 @@ describe('remembering the new-game settings', () => {
 
   it('options: default to showing activity, remember a change, and ignore junk', () => {
     const store = fakeStore();
-    expect(loadUiOptions(store)).toEqual({ showActivity: true, animations: true });
-    saveUiOptions({ showActivity: false, animations: true }, store);
     expect(loadUiOptions(store)).toEqual({ showActivity: false, animations: true });
-    expect(sanitizeUiOptions({ showActivity: 'no' })).toEqual({ showActivity: true, animations: true });
-    expect(sanitizeUiOptions(null)).toEqual({ showActivity: true, animations: true });
+    saveUiOptions({ showActivity: true, animations: true }, store);
+    expect(loadUiOptions(store)).toEqual({ showActivity: true, animations: true });
+    expect(sanitizeUiOptions({ showActivity: 'no' })).toEqual({ showActivity: false, animations: true });
+    expect(sanitizeUiOptions(null)).toEqual({ showActivity: false, animations: true });
   });
   it('defaults to a 2-player game: you against one Medium computer', () => {
     expect(DEFAULT_SETUP).toEqual({ name: 'You', opponents: ['medium'], spectate: false });

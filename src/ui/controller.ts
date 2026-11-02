@@ -26,6 +26,8 @@ export interface Session {
    * because undo-and-redraw would let a player peek at the stock for free.
    */
   undoStack: GameState[];
+  /** What the last action did, so sound can react. Transient: never saved. */
+  events?: GameEvent[];
 }
 export interface SetupOptions {
   name: string;
@@ -78,7 +80,7 @@ export function apply(session: Session, action: Action): ApplyResult {
   const human = session.seats[session.state.current]?.kind === 'human';
   const stack = session.undoStack ?? [];
   const undoStack = human && UNDOABLE.has(action.type) ? [...stack, session.state].slice(-MAX_UNDO) : [];
-  return { ok: true, session: { ...session, state: r.state, log: [...session.log, ...lines].slice(-MAX_LOG), undoStack } };
+  return { ok: true, session: { ...session, state: r.state, log: [...session.log, ...lines].slice(-MAX_LOG), undoStack, events: r.events } };
 }
 
 export const canUndo = (session: Session): boolean =>
@@ -89,7 +91,7 @@ export function undo(session: Session): Session {
   if (!canUndo(session)) return session;
   const stack = session.undoStack;
   const previous = stack[stack.length - 1] as GameState;
-  return { ...session, state: previous, undoStack: stack.slice(0, -1), log: [...session.log, 'You took back your last play.'].slice(-MAX_LOG) };
+  return { ...session, events: [], state: previous, undoStack: stack.slice(0, -1), log: [...session.log, 'You took back your last play.'].slice(-MAX_LOG) };
 }
 
 /** If it is a computer seat's turn, play one action for it. */
@@ -199,6 +201,22 @@ export function baseFromSelection(selected: readonly Card[], step: number): Meld
   if (!base) return null;
   const used = base.reduce((n, m) => n + m.cardIds.length, 0);
   return used === selected.length ? base : null;
+}
+
+/**
+ * For a selection that makes up the base: each of its melds with every reading it
+ * could have (a wild at the end of a run can stand for the card above or below).
+ * The player is asked to pick wherever there is more than one.
+ */
+export function baseChoices(selected: readonly Card[], step: number): MeldSpec[][] | null {
+  const base = baseFromSelection(selected, step);
+  if (!base) return null;
+  const byId = new Map(selected.map((c) => [c.id, c]));
+  return base.map((spec) => {
+    const cards = spec.cardIds.map((id) => byId.get(id) as Card);
+    const options = meldOptions(cards, true, [spec.kind]);
+    return options.length > 0 ? options : [spec];
+  });
 }
 
 /** Do these staged melds make up the player's base? */
@@ -477,7 +495,7 @@ export interface UiOptions {
   /** Cards glide, fly and flip into place. */
   animations: boolean;
 }
-export const DEFAULT_UI_OPTIONS: UiOptions = { showActivity: true, animations: true };
+export const DEFAULT_UI_OPTIONS: UiOptions = { showActivity: false, animations: true };
 export const UI_OPTIONS_KEY = '15steps.options.v1';
 
 /** Turn whatever was stored into valid options, using the default for anything wrong or missing. */
@@ -511,7 +529,8 @@ export function saveUiOptions(options: UiOptions, store: Store | null = defaultS
 export const SESSION_SAVE_KEY = '15steps.session.v1';
 
 export function serializeSession(session: Session): string {
-  return JSON.stringify({ format: '15steps-session', version: 1, session });
+  const { events: _events, ...saved } = session;
+  return JSON.stringify({ format: '15steps-session', version: 1, session: saved });
 }
 
 export function deserializeSession(text: string): Session | null {
@@ -546,4 +565,48 @@ export function loadSpeed(store: Pick<Storage, 'getItem'> | null = typeof localS
 }
 export function saveSpeed(index: number, store: Pick<Storage, 'setItem'> | null = typeof localStorage === 'undefined' ? null : localStorage): void {
   try { store?.setItem(SPEED_KEY, String(index)); } catch { /* not saved: the speed just resets next time */ }
+}
+
+
+// ---- Sound settings ----
+
+export interface SoundSettings {
+  soundOn: boolean;
+  /** 0 to 1 */
+  soundVolume: number;
+  musicOn: boolean;
+  /** 0 to 1 */
+  musicVolume: number;
+}
+export const DEFAULT_SOUND: SoundSettings = { soundOn: true, soundVolume: 0.7, musicOn: true, musicVolume: 0.4 };
+export const SOUND_KEY = '15steps.sound.v1';
+
+const unit = (v: unknown, fallback: number): number =>
+  typeof v === 'number' && Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : fallback;
+
+export function sanitizeSound(raw: unknown): SoundSettings {
+  const r = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>;
+  return {
+    soundOn: typeof r.soundOn === 'boolean' ? r.soundOn : DEFAULT_SOUND.soundOn,
+    soundVolume: unit(r.soundVolume, DEFAULT_SOUND.soundVolume),
+    musicOn: typeof r.musicOn === 'boolean' ? r.musicOn : DEFAULT_SOUND.musicOn,
+    musicVolume: unit(r.musicVolume, DEFAULT_SOUND.musicVolume),
+  };
+}
+
+export function loadSound(store: Pick<Storage, 'getItem'> | null = defaultStore()): SoundSettings {
+  try {
+    const text = store?.getItem(SOUND_KEY);
+    return sanitizeSound(text ? JSON.parse(text) : null);
+  } catch {
+    return { ...DEFAULT_SOUND };
+  }
+}
+
+export function saveSound(settings: SoundSettings, store: Pick<Storage, 'setItem'> | null = defaultStore()): void {
+  try {
+    store?.setItem(SOUND_KEY, JSON.stringify(sanitizeSound(settings)));
+  } catch {
+    /* the game still works, it just won't remember */
+  }
 }

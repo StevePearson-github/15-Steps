@@ -4,9 +4,10 @@ import type { Action } from '../engine';
 import { Setup } from './Setup';
 import { Table } from './Table';
 import { setMotionScale } from './motion';
+import { audio, sfxForEvent } from './audio';
 import {
   SESSION_SAVE_KEY, SPEED_FACTORS, loadSpeed, saveSpeed, speedLabel, type Session, type SetupOptions, aiStep, apply, createSession,
-  deserializeSession, humanSeat, makePlayers, serializeSession, undo,
+  deserializeSession, humanSeat, loadSound, makePlayers, saveSound, serializeSession, undo,
 } from './controller';
 
 function loadSaved(): Session | null {
@@ -38,6 +39,35 @@ export function App({ aiDelayMs = 700 }: { aiDelayMs?: number }) {
   const [speed, setSpeed] = useState(() => loadSpeed());
   const factor = SPEED_FACTORS[speed] ?? 1;
   useEffect(() => { setMotionScale(factor); saveSpeed(speed); }, [speed, factor]);
+
+  // Sound and music: remembered between launches. Browsers only allow audio after a click or key press.
+  const [sound, setSound] = useState(() => loadSound());
+  useEffect(() => { audio.configure(sound); saveSound(sound); }, [sound]);
+  useEffect(() => {
+    const unlock = () => audio.unlock();
+    window.addEventListener('pointerdown', unlock);
+    window.addEventListener('keydown', unlock);
+    return () => {
+      window.removeEventListener('pointerdown', unlock);
+      window.removeEventListener('keydown', unlock);
+    };
+  }, []);
+  const played = useRef<Session | null>(null);
+  useEffect(() => {
+    if (!session || played.current === session) return;
+    played.current = session;
+    const me = humanSeat(session);
+    const events = session.events ?? [];
+    events.forEach((e, i) => {
+      const name = sfxForEvent(e, me);
+      if (name) audio.play(name, i * 0.12);
+    });
+    // Tell the player when it becomes their turn.
+    const s = session.state;
+    if (me >= 0 && s.phase === 'play' && s.current === me && events.some((e) => e.type === 'cardDiscarded' || e.type === 'roundStarted')) {
+      audio.play('turn', events.length * 0.12 + 0.15);
+    }
+  }, [session]);
 
   const start = (opts: SetupOptions) => {
     const s = createSession(opts);
@@ -83,7 +113,7 @@ export function App({ aiDelayMs = 700 }: { aiDelayMs?: number }) {
     return () => clearTimeout(timer);
   }, [session, aiDelayMs, paused, factor]);
 
-  if (!session) return <Setup onStart={start} {...(saved ? { onContinue: resume } : {})} />;
+  if (!session) return <Setup sound={{ settings: sound, onChange: setSound }} onStart={start} {...(saved ? { onContinue: resume } : {})} />;
 
   const onAction = (action: Action): string | null => {
     const r = apply(session, action);
@@ -95,6 +125,7 @@ export function App({ aiDelayMs = 700 }: { aiDelayMs?: number }) {
   return (
     <Table
       session={session}
+      sound={{ settings: sound, onChange: setSound }}
       onAction={onAction}
       onNewGame={() => {
         setPaused(false);

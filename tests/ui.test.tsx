@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { App } from '../src/ui/App';
 import { Setup } from '../src/ui/Setup';
 import { describeStep as describeStepText } from '../src/ui/controller';
@@ -120,6 +120,21 @@ describe('playing a turn', () => {
     expect(actions[0]).toMatchObject({ type: 'layBase', melds: [{ kind: 'set', rank: 7 }, { kind: 'set', rank: 8 }] });
   });
 
+  it('asks which end a wild takes in a run when you lay the base, instead of guessing', () => {
+    // Step 8: two runs of 4. 10-J-Q + joker can be 9-Q or 10-K, and the player wants the king.
+    const actions = tableFor({ hands: ['TD JD QD X 3C 4C 5C 8S 2H', '5H 6H'], steps: [8, 1] });
+    clickCards('TD.1', 'JD.1', 'QD.1', 'X.1', '3C.1', '4C.1', '5C.1', '2H.1');
+    fireEvent.click(screen.getByRole('button', { name: 'Lay down base' }));
+    expect(actions).toHaveLength(0);
+    expect(screen.getByRole('dialog', { name: 'Which run is this?' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: /10–K/ }));
+    // the clubs run (3-4-5 with a wild 2) is ambiguous too, so it is asked about next
+    fireEvent.click(screen.getByRole('button', { name: /3–6/ }));
+    expect(actions[0]).toMatchObject({ type: 'layBase' });
+    const runs = (actions[0] as { melds: { kind: string; suit: string; start: number }[] }).melds;
+    expect(runs.find((m) => m.suit === 'D')?.start).toBe(10);
+  });
+
   it('suggests a base by selecting its cards in your hand, then lays it down', () => {
     const actions = tableFor({ hands: ['7S 7H 7D 8S 8H 8D 4C 9C', '5H 6H'] });
     fireEvent.click(screen.getByRole('button', { name: 'Suggest base' }));
@@ -130,6 +145,14 @@ describe('playing a turn', () => {
     expect(document.querySelectorAll('.staged')).toHaveLength(0);
     fireEvent.click(screen.getByRole('button', { name: 'Lay down base' }));
     expect(actions[0]?.type).toBe('layBase');
+  });
+
+  it('an error message goes away at the next click anywhere, e.g. on a sort button', () => {
+    tableFor({ hands: ['7S 8H 9D 3S 4H 6D JC KC', '5H 6H'] });
+    fireEvent.click(screen.getByRole('button', { name: 'Suggest base' }));
+    expect(screen.getByRole('alert')).toBeTruthy();
+    fireEvent.pointerDown(screen.getByRole('button', { name: /Smart/ }));
+    expect(screen.queryByRole('alert')).toBeNull();
   });
 
   it('a suggestion can be adjusted: deselect a card and the base is no longer ready', () => {
@@ -961,13 +984,13 @@ describe('the 15 steps pop-up', () => {
 
   it('the activity window can be turned off and on in Options, and the choice is remembered', () => {
     tableFor({ hands: ['3S 4S', '5H'] });
-    expect(document.querySelector('.log')).not.toBeNull();
+    expect(document.querySelector('.log')).toBeNull(); // off unless the player turns it on
     fireEvent.click(screen.getByRole('button', { name: 'Options' }));
     fireEvent.click(screen.getByRole('checkbox', { name: /activity window/i }));
-    expect(document.querySelector('.log')).toBeNull();
-    expect(JSON.parse(localStorage.getItem('15steps.options.v1') ?? '{}')).toEqual({ showActivity: false, animations: true });
-    fireEvent.click(screen.getByRole('checkbox', { name: /activity window/i }));
     expect(document.querySelector('.log')).not.toBeNull();
+    expect(JSON.parse(localStorage.getItem('15steps.options.v1') ?? '{}')).toEqual({ showActivity: true, animations: true });
+    fireEvent.click(screen.getByRole('checkbox', { name: /activity window/i }));
+    expect(document.querySelector('.log')).toBeNull();
   });
 
   it('opens from the right-click menu and lists every step', () => {
@@ -1442,6 +1465,7 @@ describe('watching the computers play', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Start game' }));
       await screen.findByRole('region', { name: 'Watching controls' });
     };
+    beforeEach(showLog);
     const logText = () => document.querySelector('.log')?.textContent ?? '';
     const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -1510,7 +1534,10 @@ describe('watching the computers play', () => {
   });
 });
 
+const showLog = () => localStorage.setItem('15steps.options.v1', JSON.stringify({ showActivity: true, animations: true }));
+
 describe('the activity card', () => {
+  beforeEach(showLog);
   const lines = () => Array.from(document.querySelectorAll('.log-lines div')).map((e) => e.textContent);
   const withLog = (log: string[]) => {
     const session: Session = { state: scenario({ phase: 'play', hands: ['3S 4S', '5H'] }), seats, log, undoStack: [] };
@@ -1741,6 +1768,7 @@ describe('opponents show their step in full, and the table is arranged to fit', 
   });
 
   it('the activity card sits at the bottom left, beside your window, so it cannot cover anything', () => {
+    showLog();
     show({ hands: ['3S', '5H', '3C'] });
     const bottom = document.querySelector('.bottom') as HTMLElement;
     expect(bottom.querySelector('.mine')).toBeTruthy();

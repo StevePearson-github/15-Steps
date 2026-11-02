@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { Difficulty } from '../ai/player';
+import { SoundControls, type SoundProps } from './SoundControls';
 import { MAX_NAME_LENGTH, type SetupOptions, type SetupPrefs, loadSetupPrefs, opponentRange, saveSetupPrefs } from './controller';
 
 const LEVELS: Difficulty[] = ['easy', 'medium', 'hard'];
@@ -7,9 +8,10 @@ const LEVELS: Difficulty[] = ['easy', 'medium', 'hard'];
 interface SetupProps {
   onStart: (opts: SetupOptions) => void;
   onContinue?: () => void;
+  sound?: SoundProps;
 }
 
-export function Setup({ onStart, onContinue }: SetupProps) {
+export function Setup({ onStart, onContinue, sound }: SetupProps) {
   // Start from whatever was used last time (a 2-player game against Medium the first time).
   const [prefs, setPrefs] = useState<SetupPrefs>(() => loadSetupPrefs());
   const { name, opponents, spectate } = prefs;
@@ -79,6 +81,12 @@ export function Setup({ onStart, onContinue }: SetupProps) {
           Start game
         </button>
       </fieldset>
+      {sound && (
+        <fieldset>
+          <legend>Sound</legend>
+          <SoundControls {...sound} />
+        </fieldset>
+      )}
     </main>
   );
 }

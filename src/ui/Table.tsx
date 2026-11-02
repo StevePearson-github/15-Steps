@@ -5,11 +5,12 @@ import {
 } from '../engine';
 import { CardView } from './CardView';
 import { ContextMenu } from './ContextMenu';
+import { SoundControls, type SoundProps } from './SoundControls';
 import { Hand, type HandHandle } from './Hand';
 import { fitToWindow, resetFit } from './fit';
 import { type Snapshot, captureCards, getMotionScale, motionAvailable, playMotion } from './motion';
 import {
-  AVATARS, SORTERS, loadUiOptions, saveUiOptions, sortHandSmart, type Session, type SortDir, type SortKey, arrangeHand, baseFromSelection, canUndo,
+  AVATARS, SORTERS, loadUiOptions, saveUiOptions, sortHandSmart, type Session, type SortDir, type SortKey, arrangeHand, baseChoices, baseFromSelection, canUndo,
   describeSpec, describeStep, humanSeat, seatColor, meldOptions, moveCards, orderForBuild, stagedMeetBase, stepKinds, verb,
 } from './controller';
 
@@ -18,6 +19,7 @@ interface TableProps {
   /** Perform a human action. Returns an error message, or null on success. */
   onAction: (action: Action) => string | null;
   onNewGame: () => void;
+  sound?: SoundProps;
   /** Take back your last play this turn. */
   onUndo?: () => void;
   /** Controls for watching computers play (only used when there is no human seat). */
@@ -38,7 +40,7 @@ interface Choice {
   apply: (spec: MeldSpec) => void;
 }
 
-export function Table({ session, onAction, onNewGame, onUndo, watch, speed }: TableProps) {
+export function Table({ session, onAction, onNewGame, onUndo, watch, speed, sound }: TableProps) {
   const { state, seats, log } = session;
   const me = humanSeat(session);
   const player = me >= 0 ? state.players[me] : undefined;
@@ -228,7 +230,19 @@ export function Table({ session, onAction, onNewGame, onUndo, watch, speed }: Ta
   const layBase = () => {
     if (baseReady) {
       if (run({ type: 'layBase', melds: staged })) setStaged([]);
-    } else if (selectionBase && run({ type: 'layBase', melds: selectionBase })) setStaged([]);
+    } else if (selectionBase && player) {
+      // Where the cards could be read more than one way (a wild at the end of a run), ask which one is meant.
+      const choices = baseChoices(selectedCards, player.step) ?? selectionBase.map((m) => [m]);
+      const pick = (i: number, chosen: MeldSpec[]) => {
+        const options = choices[i];
+        if (!options) {
+          if (run({ type: 'layBase', melds: chosen })) setStaged([]);
+          return;
+        }
+        offer(options[0]?.kind === 'run' ? 'Which run is this?' : 'What are these cards?', options, (spec) => pick(i + 1, [...chosen, spec]));
+      };
+      pick(0, []);
+    }
   };
 
   const build = (meld: Meld, side?: 'low' | 'high') => {
@@ -272,6 +286,8 @@ export function Table({ session, onAction, onNewGame, onUndo, watch, speed }: Ta
     <div
       className="table"
       onPointerDown={(e) => {
+        // A pop-up message (like "No base to suggest yet.") goes away at the next click anywhere.
+        setMessage((m) => (m ? '' : m));
         const empty = e.button === 0 && isEmptySpot(e.target);
         emptyPress.current = empty ? { x: e.clientX, y: e.clientY } : null;
         // Dragging from empty board draws a selection box over the hand (a mouse or pen; a finger scrolls instead).
@@ -338,6 +354,8 @@ export function Table({ session, onAction, onNewGame, onUndo, watch, speed }: Ta
       </header>
 
       <section className="opponents" aria-label="Players" data-count={Math.min(playerOrder.length, 5)} data-carousel={carousel ? 1 : undefined}>
+        {/* The middle window stays in the exact middle: an empty spacer fills in for any side window the other side has and this one lacks. */}
+        {carousel && shown.indexOf(focus) < shown.length - 1 - shown.indexOf(focus) && <div className="opp-spacer" aria-hidden="true" style={{ flex: `${shown.length - 1 - 2 * shown.indexOf(focus)} 1 0`, maxWidth: 290 * (shown.length - 1 - 2 * shown.indexOf(focus)) }} />}
         {shown.map((i) => {
           const p = state.players[i];
           if (!p) return null;
@@ -377,6 +395,7 @@ export function Table({ session, onAction, onNewGame, onUndo, watch, speed }: Ta
             </div>
           );
         })}
+        {carousel && shown.indexOf(focus) > shown.length - 1 - shown.indexOf(focus) && <div className="opp-spacer" aria-hidden="true" style={{ flex: `${2 * shown.indexOf(focus) - (shown.length - 1)} 1 0`, maxWidth: 290 * (2 * shown.indexOf(focus) - (shown.length - 1)) }} />}
       </section>
 
       <section className="center">
@@ -580,6 +599,7 @@ export function Table({ session, onAction, onNewGame, onUndo, watch, speed }: Ta
                 <span className="hint">Cards glide, fly and flip into place.</span>
               </span>
             </label>
+            {sound && <SoundControls {...sound} />}
             <button type="button" className="primary" onClick={() => setShowOptions(false)}>Close</button>
           </div>
         </div>

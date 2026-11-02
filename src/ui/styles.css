@@ -315,7 +315,7 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
 .goal .hint { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 /* Keeps the row of play buttons' space when they are not showing, so the table does not change size between drawing and playing. */
 .actions-spacer { height: 2.3rem; }
-.mine .error { position: absolute; top: -14px; right: 16px; margin: 0; padding: 2px 14px; background: rgba(7, 27, 19, 0.92); border: 2px solid #ffb4a8; border-radius: 999px; z-index: 3; }
+.mine .error { position: absolute; top: -14px; left: 50%; transform: translateX(-50%); white-space: nowrap; margin: 0; padding: 2px 14px; background: rgba(7, 27, 19, 0.92); border: 2px solid #ffb4a8; border-radius: 999px; z-index: 3; }
 .goal strong { color: var(--yellow); }
 .staging { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; font-size: 0.98rem; }
 .staged { background: rgba(255, 255, 255, 0.15); border-radius: 999px; padding: 2px 12px; }
@@ -563,3 +563,65 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
 .topbar-buttons { align-items: center; }
 .speed { background: var(--panel); border: 2px solid var(--panel-edge); border-radius: 999px; padding: 3px 6px 3px 12px; font-size: 0.9rem; }
 .speed-title { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; opacity: 0.75; margin-right: 2px; }
+
+/* Sound settings */
+.sound-controls { display: grid; gap: 10px; }
+.sound-row { display: grid; grid-template-columns: minmax(9.5em, auto) 1fr; align-items: center; gap: 14px; }
+.sound-toggle { display: flex; justify-content: flex-start; align-items: center; gap: 10px; cursor: pointer; }
+.sound-toggle input { width: 1.4em; height: 1.4em; accent-color: var(--yellow); flex: none; }
+.sound-row input[type='range'] { width: 100%; min-width: 8em; accent-color: var(--yellow); }
+.sound-row input[type='range']:disabled { opacity: 0.4; }
+.setup .sound-toggle { justify-content: flex-start; }
+
+/* The turn bubble sits in the true middle of the hand panel, not the leftover space between its neighbours. */
+.goal { position: relative; }
+.goal .status-pill.in-hand { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); margin: 0; max-width: 60%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* The middle never scrolls as a whole: the piles stay put and only the melds scroll when there are too many to fit. */
+.center { overflow: hidden; }
+.board { flex: 1 1 auto; min-height: 0; }
+.piles { flex: none; }
+.melds { align-self: stretch; align-content: safe center; max-height: 100%; overflow-y: auto; overflow-x: hidden; padding: 8px 6px 22px; scrollbar-width: thin; }
+
+/* One or two opponents: on a window wide enough, float the scoreboard in the corner too, so it stops taking a row of its own
+   and the opponent and the table get that height back (this is what keeps a crowded table from needing a scroll bar). */
+@media (min-width: 1240px) {
+  .table:has(.opponents[data-count='1']), .table:has(.opponents[data-count='2']) { --sb-w: 218px; }
+  .table:has(.opponents[data-count='1']) .scoreboard, .table:has(.opponents[data-count='2']) .scoreboard {
+    position: absolute; top: 10px; left: 16px; z-index: 3; width: var(--sb-w); min-width: 0;
+  }
+  .table:has(.opponents[data-count='1']) .opponents, .table:has(.opponents[data-count='2']) .opponents { margin-left: calc(var(--sb-w) + 6px); padding-top: 0; margin-top: 24px; }
+  .table:has(.opponents[data-count='1']) .topbar, .table:has(.opponents[data-count='2']) .topbar { justify-content: flex-end; }
+}
+
+/* The piles (and their captions) are never squeezed: the middle is at least as tall as they are. */
+.center { min-height: calc(var(--pile-h) + 46px); }
+/* A short window gives a lone opponent a smaller window, so the table keeps its room. */
+@media (max-height: 900px) {
+  .opponents[data-count='1'] { --opp-s: 1; --opp-back: 0.6; --opp-max: 700px; }
+}
+
+/* Melds on the table shrink a little (see fit.ts) when there are too many to fit; --meld-scale is 1 normally. */
+.melds { --small-w: calc(var(--card-w) * 0.84 * var(--meld-scale, 1)); --small-h: calc(var(--small-w) * 1.414); }
+
+/* The carousel's middle window sits in the true middle (see the spacer in Table.tsx). */
+.opp-spacer { min-width: 0; pointer-events: none; }
+
+/* A wide window, you playing against one or two computers: the middle window rises to the top of the table, in line with the menu
+   buttons (there is room either side of it), and the smaller windows sit lower, under the button bar. */
+@media (min-width: 1700px) {
+  .table:has(.opponents[data-carousel][data-count='2']):not(:has(.watch-bar)),
+  .table:has(.opponents[data-carousel][data-count='3']):not(:has(.watch-bar)) {
+    --raise: 1;
+  }
+  .table:has(.opponents[data-carousel][data-count='2']):not(:has(.watch-bar)) .topbar,
+  .table:has(.opponents[data-carousel][data-count='3']):not(:has(.watch-bar)) .topbar {
+    position: absolute; top: 10px; left: 16px; right: 16px; height: 0; z-index: 4; pointer-events: none;
+  }
+  .table:has(.opponents[data-carousel][data-count='2']):not(:has(.watch-bar)) .topbar > *,
+  .table:has(.opponents[data-carousel][data-count='3']):not(:has(.watch-bar)) .topbar > * { pointer-events: auto; }
+  .table:has(.opponents[data-carousel][data-count='2']):not(:has(.watch-bar)) .opponents,
+  .table:has(.opponents[data-carousel][data-count='3']):not(:has(.watch-bar)) .opponents { margin: 0 0 0 calc(var(--sb-w, 218px) * 0); padding-top: 0; }
+  .table:has(.opponents[data-carousel][data-count='2']):not(:has(.watch-bar)) .opponent.side,
+  .table:has(.opponents[data-carousel][data-count='3']):not(:has(.watch-bar)) .opponent.side { margin-top: 68px; }
+}
