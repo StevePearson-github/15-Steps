@@ -657,3 +657,14 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
   .steps-card h2 { font-size: 1.3rem; }
   .steps-card .hint { font-size: 0.85rem; }
 }
+
+/* The piles and melds share the opponents' centre line: wherever the opponent row is pushed right to make room for the
+   floating score box, the middle row gets the same offset, so the melds sit centred under the opponent and not under the table. */
+.table:has(.opponents[data-count='3']) .center, .table:has(.opponents[data-count='4']) .center, .table:has(.opponents[data-count='5']) .center { padding-left: calc(var(--sb-w) + 6px); }
+@media (min-width: 1240px) {
+  .table:has(.opponents[data-count='1']) .center, .table:has(.opponents[data-count='2']) .center { padding-left: calc(var(--sb-w) + 6px); }
+}
+@media (min-width: 1700px) {
+  .table:has(.opponents[data-carousel][data-count='2']):not(:has(.watch-bar)) .center,
+  .table:has(.opponents[data-carousel][data-count='3']):not(:has(.watch-bar)) .center { padding-left: 0; }
+}
