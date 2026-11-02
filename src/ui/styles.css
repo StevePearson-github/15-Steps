@@ -354,7 +354,7 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
 /* ---- The bottom row: your window in the middle, the activity card in the bottom right ---- */
 
 .bottom { margin-top: auto; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 12px; align-items: end; }
-.bottom .mine { grid-column: 2; width: 100%; max-width: calc(var(--card-w) * 13.5 + 80px); justify-self: center; margin-top: 0; }
+.bottom .mine { grid-column: 2; width: 100%; max-width: max(calc(var(--card-w) * 13.5 + 80px), 1180px); justify-self: center; margin-top: 0; } /* never narrower than the button row needs, or it wraps and pushes the panel off the bottom */
 /* The activity card sits low in the bottom-left corner, out of the way. */
 .bottom .log { grid-column: 1; grid-row: 1; width: 190px; max-width: 190px; align-self: end; font-size: 0.82rem; }
 .bottom .log.collapsed { width: auto; }
@@ -434,6 +434,11 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
 }
 @media (max-width: 600px) {
   .opponent { flex: 1 1 100%; max-width: none; }
+}
+
+/* Very short windows (a 1080p screen at 150% scaling leaves ~670 CSS px): smaller cards, so the hand and buttons still fit on screen. */
+@media (max-height: 720px) {
+  :root { --card-w: clamp(56px, min(11.4vh, 8.4vw), 170px); }
 }
 
 /* Short windows (a laptop): trim the top bar so the whole table fits without scrolling. */
