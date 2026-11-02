@@ -147,6 +147,14 @@ describe('playing a turn', () => {
     expect(actions[0]?.type).toBe('layBase');
   });
 
+  it('an error message goes away at the next click anywhere, e.g. on a sort button', () => {
+    tableFor({ hands: ['7S 8H 9D 3S 4H 6D JC KC', '5H 6H'] });
+    fireEvent.click(screen.getByRole('button', { name: 'Suggest base' }));
+    expect(screen.getByRole('alert')).toBeTruthy();
+    fireEvent.pointerDown(screen.getByRole('button', { name: /Smart/ }));
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
   it('a suggestion can be adjusted: deselect a card and the base is no longer ready', () => {
     tableFor({ hands: ['7S 7H 7D 8S 8H 8D 4C 9C', '5H 6H'] });
     fireEvent.click(screen.getByRole('button', { name: 'Suggest base' }));

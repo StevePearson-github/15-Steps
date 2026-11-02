@@ -286,6 +286,8 @@ export function Table({ session, onAction, onNewGame, onUndo, watch, speed, soun
     <div
       className="table"
       onPointerDown={(e) => {
+        // A pop-up message (like "No base to suggest yet.") goes away at the next click anywhere.
+        setMessage((m) => (m ? '' : m));
         const empty = e.button === 0 && isEmptySpot(e.target);
         emptyPress.current = empty ? { x: e.clientX, y: e.clientY } : null;
         // Dragging from empty board draws a selection box over the hand (a mouse or pen; a finger scrolls instead).

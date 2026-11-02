@@ -315,7 +315,7 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
 .goal .hint { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 /* Keeps the row of play buttons' space when they are not showing, so the table does not change size between drawing and playing. */
 .actions-spacer { height: 2.3rem; }
-.mine .error { position: absolute; top: -14px; right: 16px; margin: 0; padding: 2px 14px; background: rgba(7, 27, 19, 0.92); border: 2px solid #ffb4a8; border-radius: 999px; z-index: 3; }
+.mine .error { position: absolute; top: -14px; left: 50%; transform: translateX(-50%); white-space: nowrap; margin: 0; padding: 2px 14px; background: rgba(7, 27, 19, 0.92); border: 2px solid #ffb4a8; border-radius: 999px; z-index: 3; }
 .goal strong { color: var(--yellow); }
 .staging { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; font-size: 0.98rem; }
 .staged { background: rgba(255, 255, 255, 0.15); border-radius: 999px; padding: 2px 12px; }
