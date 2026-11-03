@@ -146,10 +146,10 @@ When the stock is empty, the top card of the discard pile stays where it is. The
 
 - Step 15 is the final step. Nobody advances past it.
 - A player finishes the game by **completing Step 15 (laying down its base) and going out** (getting rid of every card, including the final discard). The first player to do both ends the game, and scores are tabulated at that moment.
-- When a round ends, every player who **completed Step 15 that round (laid its base)** has finished all 15 steps. Once someone has gone out on Step 15, penalties are added and **the finisher with the lowest score wins**. It does not matter which finisher went out: if two players both completed Step 15 and one goes out, the other takes penalties, and then the lower total wins.
-- A player who did not complete Step 15 cannot win that round, whatever their score.
-- **Ties:** If two or more finishers tie for the lowest score, the game continues: everyone repeats the step they were on (Step 15 for the finishers) until the tie is broken by a round in which one finisher is strictly lowest.
-- If you go out on Step 15 and a player who also finished it has a lower score, **the game ends and they win**.
+- When someone goes out on Step 15, penalties are added and scores are tabulated. A player has **finished** if they completed Step 15 that round (laid its base).
+- The **player with the strictly lowest score overall wins, provided they finished Step 15**. It does not matter which finisher went out: if two players both completed Step 15 and one goes out, the other takes penalties, and then the lower total wins.
+- If the lowest score belongs to a player who did not finish Step 15, **nobody wins that round**: someone who went out on Step 15 without the lowest score repeats Step 15 in following rounds.
+- **Ties:** If players tie for the lowest score, the game continues: everyone repeats the step they were on (Step 15 for the finishers) until a round ends with a single lowest score held by a finisher.
 
 ## Strategy Notes
 

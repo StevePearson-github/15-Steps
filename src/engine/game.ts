@@ -304,10 +304,11 @@ function endRound(s: GameState, wentOut: number, events: GameEvent[]): void {
   s.lastRound = result;
   events.push({ type: 'roundEnded', result });
 
-  // The lowest score among the finishers wins; a tie for lowest means play continues.
-  const best = Math.min(...finishers.map((i) => (s.players[i] as PlayerState).score));
-  const leaders = finishers.filter((i) => (s.players[i] as PlayerState).score === best);
-  if (goerStep === FINAL_STEP && leaders.length === 1) {
+  // The winner is the player with the strictly lowest score overall, provided they finished Step 15.
+  // If the lowest score is tied, or belongs to someone who has not finished, play continues.
+  const best = Math.min(...s.players.map((p) => p.score));
+  const leaders = s.players.map((p, i) => (p.score === best ? i : -1)).filter((i) => i >= 0);
+  if (goerStep === FINAL_STEP && leaders.length === 1 && finishers.includes(leaders[0] as number)) {
     const winner = leaders[0] as number;
     s.phase = 'gameOver';
     s.winner = winner;

@@ -267,16 +267,28 @@ describe('winning', () => {
     expect(g.phase).toBe('gameOver');
     expect(g.winner).toBe(1);
   });
-  it('a tie for lowest among those who finished step 15 continues the game', () => {
+  it('a tie for lowest between two finishers continues the game', () => {
     const g = finalRound([5, 0], [15, 15], [true, true]);
     expect(g.players.map((p) => p.score)).toEqual([5, 5]);
     expect(g.phase).toBe('roundOver');
     expect(g.players.map((p) => p.step)).toEqual([15, 15]);
   });
-  it('a player who did not finish step 15 cannot win, and a player arriving from step 14 is not a finisher', () => {
+  it('a lower score held by a player who did not finish step 15 stops the goer winning', () => {
+    const g = finalRound([40, 0]);
+    expect(g.players.map((p) => p.score)).toEqual([40, 5]);
+    expect(g.phase).toBe('roundOver');
+    expect(g.players.map((p) => p.step)).toEqual([15, 15]);
+  });
+  it('a tie for lowest between a finisher and a non-finisher continues the game', () => {
+    const g = finalRound([5, 0]);
+    expect(g.players.map((p) => p.score)).toEqual([5, 5]);
+    expect(g.phase).toBe('roundOver');
+  });
+  it('a player arriving from step 14 is not a finisher', () => {
     const g = scenario({ hands: ['3S', '9H', '4D'], steps: [15, 14, 15], scores: [10, 0, 50], baseLaid: [true, true, false], phase: 'play' });
     const done = must(g, { type: 'discard', cardId: '3S.1' });
-    expect(done.winner).toBe(0);
+    expect(done.players.map((p) => p.score)).toEqual([10, 5, 55]);
+    expect(done.phase).toBe('roundOver');
   });
   it('going out earlier than step 15 never ends the game', () => {
     const g = finalRound([0, 100], [14, 14]);
