@@ -16,7 +16,13 @@ const overflows = (): boolean => {
 };
 
 /** If overlapping is not enough, the cards in the melds shrink a little (never below about two thirds), loosest first. */
-const SCALES = [1, 0.9, 0.8, 0.7, 0.62];
+const SCALES = [1, 0.9, 0.8, 0.7, 0.62, 0.56];
+
+/** Before shrinking the cards another step, the space between melds (and between the owners' groups) tightens: much less visible, and often just enough to keep everything on one row. */
+const GAPS = [1, 0.4];
+
+/** Only when the melds are still too many after all that: every card on the table gets a little smaller (the same factor for all of them), so the middle has more room. */
+const TABLE_KS = [1, 0.92, 0.85, 0.78];
 
 /** A step's description that would be cut off ("Step 6: two sets of 3 + o…") gets a smaller font until it fits, down to about two thirds. */
 function fitStepText(): void {
@@ -33,14 +39,18 @@ function fitStepText(): void {
 export function fitToWindow(): void {
   fitStepText();
   const root = document.documentElement.style;
-  const tries: [number, number][] = [];
-  for (const scale of SCALES) for (const overlap of OVERLAPS.slice(0, 4)) tries.push([scale, overlap]);
+  const tries: [number, number, number][] = [];
+  for (const scale of SCALES) for (const gap of GAPS) for (const overlap of OVERLAPS.slice(0, 4)) tries.push([scale, overlap, gap]);
   // As a last resort, overlap the smallest cards as far as is still readable.
-  for (const overlap of OVERLAPS.slice(4)) tries.push([SCALES[SCALES.length - 1] as number, overlap]);
-  for (const [scale, overlap] of tries) {
-    root.setProperty('--meld-overlap', String(-overlap));
-    root.setProperty('--meld-scale', String(scale));
-    if (!overflows()) return;
+  for (const overlap of OVERLAPS.slice(4)) tries.push([SCALES[SCALES.length - 1] as number, overlap, GAPS[GAPS.length - 1] as number]);
+  for (const k of TABLE_KS) {
+    root.setProperty('--table-k', String(k));
+    for (const [scale, overlap, gap] of tries) {
+      root.setProperty('--meld-overlap', String(-overlap));
+      root.setProperty('--meld-scale', String(scale));
+      root.setProperty('--meld-gap-k', String(gap));
+      if (!overflows()) return;
+    }
   }
 }
 
@@ -48,4 +58,6 @@ export function fitToWindow(): void {
 export function resetFit(): void {
   document.documentElement.style.removeProperty('--meld-overlap');
   document.documentElement.style.removeProperty('--meld-scale');
+  document.documentElement.style.removeProperty('--meld-gap-k');
+  document.documentElement.style.removeProperty('--table-k');
 }
