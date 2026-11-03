@@ -294,6 +294,8 @@ function endRound(s: GameState, wentOut: number, events: GameEvent[]): void {
   events.push({ type: 'wentOut', player: wentOut });
   const penalties = s.players.map((p, i) => (i === wentOut ? 0 : handPoints(p.hand)));
   const goerStep = (s.players[wentOut] as PlayerState).step;
+  // Taken before anyone advances: only players who laid Step 15's base this round have finished all 15 steps.
+  const finishers = s.players.map((p, i) => (p.step === FINAL_STEP && p.baseLaid ? i : -1)).filter((i) => i >= 0);
   s.players.forEach((p, i) => {
     p.score += penalties[i] as number;
     if (p.baseLaid && p.step < FINAL_STEP) p.step += 1;
@@ -302,12 +304,14 @@ function endRound(s: GameState, wentOut: number, events: GameEvent[]): void {
   s.lastRound = result;
   events.push({ type: 'roundEnded', result });
 
-  const goerScore = (s.players[wentOut] as PlayerState).score;
-  const lowest = s.players.every((p, i) => i === wentOut || p.score > goerScore);
-  if (goerStep === FINAL_STEP && lowest) {
+  // The lowest score among the finishers wins; a tie for lowest means play continues.
+  const best = Math.min(...finishers.map((i) => (s.players[i] as PlayerState).score));
+  const leaders = finishers.filter((i) => (s.players[i] as PlayerState).score === best);
+  if (goerStep === FINAL_STEP && leaders.length === 1) {
+    const winner = leaders[0] as number;
     s.phase = 'gameOver';
-    s.winner = wentOut;
-    events.push({ type: 'gameEnded', winner: wentOut });
+    s.winner = winner;
+    events.push({ type: 'gameEnded', winner });
   } else {
     s.phase = 'roundOver';
   }
