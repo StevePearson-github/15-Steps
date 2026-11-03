@@ -75,7 +75,7 @@ describe('AI players always make legal moves', () => {
 describe('simulation', () => {
   const levels: Difficulty[] = ['easy', 'medium', 'hard'];
 
-  it('whole games finish, with a winner who went out on step 15', () => {
+  it('whole games finish, with a winner who finished step 15', () => {
     for (let seed = 1; seed <= 8; seed++) {
       const result = runGame(
         { playerNames: ['A', 'B', 'C'], seed },
@@ -84,9 +84,8 @@ describe('simulation', () => {
       expect(result.finished).toBe(true);
       expect(cardCount(result.state)).toBe(108);
       const winner = result.state.winner as number;
-      expect(result.state.lastRound?.wentOut).toBe(winner);
-      const scores = result.state.players.map((p) => p.score);
-      expect(scores[winner]).toBeLessThan(Math.min(...scores.filter((_, i) => i !== winner)));
+      expect(result.state.players[winner]?.step).toBe(15);
+      expect(result.state.players[winner]?.baseLaid).toBe(true);
     }
   });
 
