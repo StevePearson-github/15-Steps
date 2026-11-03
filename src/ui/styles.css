@@ -45,7 +45,7 @@
 
   /* Card size. One value, --card-w, follows the window (height first, so the whole table fits the screen);
      every other card size, and everything on a card, is a multiple of it. */
-  --card-w: clamp(62px, min(12.6vh, 8.4vw), 170px);
+  --card-w: calc(clamp(62px, min(12.6vh, 8.4vw), 170px) * var(--table-k, 1)); /* --table-k is 1 unless a very crowded table needed the cards a little smaller (fit.ts) */
   --card-h: calc(var(--card-w) * 1.414);
   --small-w: calc(var(--card-w) * 0.84);   /* melds on the table, and revealed hands */
   --small-h: calc(var(--small-w) * 1.414);
@@ -216,10 +216,10 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
 .caption { text-align: center; font-size: 0.8rem; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; opacity: 0.92; margin-top: 10px; }
 /* The piles and the melds sit side by side in one centred row (and stack on a narrow screen). */
 .board { width: 100%; display: flex; flex-wrap: nowrap; justify-content: center; align-items: center; gap: 12px 32px; }
-.melds { flex: 0 1 auto; min-width: 0; display: flex; flex-wrap: wrap; justify-content: center; align-items: flex-start; gap: 10px 16px; }
+.melds { flex: 0 1 auto; min-width: 0; display: flex; flex-wrap: wrap; justify-content: center; align-items: flex-start; gap: calc(10px * var(--meld-gap-k, 1)) calc(16px * var(--meld-gap-k, 1)); }
 .slot-hint { border: 3px dashed rgba(255, 255, 255, 0.3); border-radius: 22px; padding: 22px 34px; color: var(--text-dim); font-weight: 500; background: rgba(0, 0, 0, 0.1); }
 .owner-melds .owner { display: inline-flex; align-items: center; gap: 6px; font-size: 0.85rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.95; margin: 0 0 4px 6px; }
-.meld-row { display: flex; flex-wrap: wrap; gap: 12px; }
+.meld-row { display: flex; flex-wrap: wrap; gap: calc(12px * var(--meld-gap-k, 1)); }
 .meld { background: var(--panel); border: 2px solid var(--panel-edge); border-radius: 14px; padding: 5px 7px 6px; transition: box-shadow 0.2s, background 0.2s; }
 .meld-cards { display: flex; }
 .meld-cards .card + .card { margin-left: calc(var(--small-w) * var(--meld-overlap, -0.46)); }
@@ -438,7 +438,7 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
 
 /* Very short windows (a 1080p screen at 150% scaling leaves ~670 CSS px): smaller cards, so the hand and buttons still fit on screen. */
 @media (max-height: 720px) {
-  :root { --card-w: clamp(56px, min(11.4vh, 8.4vw), 170px); }
+  :root { --card-w: calc(clamp(56px, min(11.4vh, 8.4vw), 170px) * var(--table-k, 1)); }
 }
 
 /* Short windows (a laptop): trim the top bar so the whole table fits without scrolling. */
