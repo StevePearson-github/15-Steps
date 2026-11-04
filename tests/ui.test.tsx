@@ -1294,14 +1294,14 @@ describe('the computer names screen', () => {
   it('lets you rename the computers, remembers it after a restart, and uses the names in the game', () => {
     const first = render(<Setup onStart={() => {}} />);
     fireEvent.click(screen.getByRole('button', { name: 'Computer names…' }));
-    fireEvent.change(screen.getByLabelText('Name for computer 1'), { target: { value: 'Max' } });
-    fireEvent.change(screen.getByLabelText('Name for computer 2'), { target: { value: 'Zoe' } });
+    fireEvent.change(screen.getByLabelText('Computer 1'), { target: { value: 'Max' } });
+    fireEvent.change(screen.getByLabelText('Computer 2'), { target: { value: 'Zoe' } });
     first.unmount(); // closing the program
     const calls: SetupOptions[] = [];
     render(<Setup onStart={(o) => calls.push(o)} />);
     fireEvent.click(screen.getByRole('button', { name: 'Computer names…' }));
-    expect((screen.getByLabelText('Name for computer 1') as HTMLInputElement).value).toBe('Max');
-    expect((screen.getByLabelText('Name for computer 3') as HTMLInputElement).value).toBe('Cleo');
+    expect((screen.getByLabelText('Computer 1') as HTMLInputElement).value).toBe('Max');
+    expect((screen.getByLabelText('Computer 3') as HTMLInputElement).value).toBe('Cleo');
     fireEvent.click(screen.getByRole('button', { name: 'Done' }));
     fireEvent.click(screen.getByRole('button', { name: 'Start game' }));
     expect(calls[0]?.computerNames?.slice(0, 3)).toEqual(['Max', 'Zoe', 'Cleo']);
@@ -1309,13 +1309,13 @@ describe('the computer names screen', () => {
   it('puts a cleared name back to its default, and "Reset" restores them all', () => {
     render(<Setup onStart={() => {}} />);
     fireEvent.click(screen.getByRole('button', { name: 'Computer names…' }));
-    fireEvent.change(screen.getByLabelText('Name for computer 1'), { target: { value: 'Max' } });
-    fireEvent.change(screen.getByLabelText('Name for computer 2'), { target: { value: '' } });
+    fireEvent.change(screen.getByLabelText('Computer 1'), { target: { value: 'Max' } });
+    fireEvent.change(screen.getByLabelText('Computer 2'), { target: { value: '' } });
     fireEvent.click(screen.getByRole('button', { name: 'Done' }));
     fireEvent.click(screen.getByRole('button', { name: 'Computer names…' }));
-    expect((screen.getByLabelText('Name for computer 2') as HTMLInputElement).value).toBe('Ben');
+    expect((screen.getByLabelText('Computer 2') as HTMLInputElement).value).toBe('Ben');
     fireEvent.click(screen.getByRole('button', { name: 'Reset to the defaults' }));
-    expect((screen.getByLabelText('Name for computer 1') as HTMLInputElement).value).toBe('Ada');
+    expect((screen.getByLabelText('Computer 1') as HTMLInputElement).value).toBe('Ada');
   });
 });
 

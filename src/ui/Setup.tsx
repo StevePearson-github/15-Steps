@@ -39,7 +39,7 @@ export function Setup({ onStart, onContinue, onCancel, sound }: SetupProps) {
           <legend>Computer names</legend>
           {DEFAULT_COMPUTER_NAMES.map((dflt, i) => (
             <label key={i}>
-              Name for computer {i + 1}{' '}
+              Computer {i + 1}{' '}
               <input
                 value={names[i] ?? ''}
                 placeholder={dflt}
