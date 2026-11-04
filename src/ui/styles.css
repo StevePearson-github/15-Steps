@@ -451,8 +451,7 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
 /* Short windows (a laptop): trim the top bar so the whole table fits without scrolling. */
 @media (max-height: 980px) {
   .scoreboard { padding: 6px 12px; }
-  .scoreboard ul { display: flex; flex-wrap: wrap; gap: 0 14px; max-width: 360px; }
-  .scoreboard li { display: flex; gap: 6px; grid-column: auto; }
+  /* (The list keeps its subgrid here, so Step and score stay in aligned columns whatever the names' lengths.) */
   .scoreboard strong { display: inline; margin-right: 8px; }
   .sb-note { display: none; }
   .log-lines div:not(:nth-last-child(-n + 2)) { display: none; }
