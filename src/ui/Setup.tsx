@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import type { Difficulty } from '../ai/player';
 import { SoundControls, type SoundProps } from './SoundControls';
-import { MAX_NAME_LENGTH, type SetupOptions, type SetupPrefs, loadSetupPrefs, opponentRange, saveSetupPrefs } from './controller';
+import {
+  DEFAULT_COMPUTER_NAMES, MAX_NAME_LENGTH, type SetupOptions, type SetupPrefs, loadComputerNames, loadSetupPrefs, opponentRange, sanitizeComputerNames, saveComputerNames, saveSetupPrefs,
+} from './controller';
 
 const LEVELS: Difficulty[] = ['easy', 'medium', 'hard'];
 
@@ -18,12 +20,40 @@ export function Setup({ onStart, onContinue, onCancel, sound }: SetupProps) {
   const [prefs, setPrefs] = useState<SetupPrefs>(() => loadSetupPrefs());
   const { name, opponents, spectate } = prefs;
   const { min, max } = opponentRange(spectate);
+  // The computers' names have a screen of their own; like everything here they are remembered as they are typed.
+  const [names, setNames] = useState<string[]>(() => loadComputerNames());
+  const [editingNames, setEditingNames] = useState(false);
+  useEffect(() => saveComputerNames(names), [names]);
 
   // Remember every change straight away, so closing the program at any point keeps it.
   useEffect(() => saveSetupPrefs(prefs), [prefs]);
 
   const setCount = (n: number, from: SetupPrefs = prefs) =>
     setPrefs({ ...from, opponents: Array.from({ length: n }, (_, i) => from.opponents[i] ?? 'medium') });
+
+  if (editingNames) {
+    return (
+      <main className="setup">
+        <h1>15 Steps</h1>
+        <fieldset>
+          <legend>Computer names</legend>
+          {DEFAULT_COMPUTER_NAMES.map((dflt, i) => (
+            <label key={i}>
+              Computer {i + 1}{' '}
+              <input
+                value={names[i] ?? ''}
+                placeholder={dflt}
+                maxLength={MAX_NAME_LENGTH}
+                onChange={(e) => setNames(names.map((n, j) => (j === i ? e.target.value : n)))}
+              />
+            </label>
+          ))}
+          <button type="button" onClick={() => setNames([...DEFAULT_COMPUTER_NAMES])}>Reset to the defaults</button>
+          <button type="button" className="primary" onClick={() => { setNames(sanitizeComputerNames(names)); setEditingNames(false); }}>Done</button>
+        </fieldset>
+      </main>
+    );
+  }
 
   return (
     <main className="setup">
@@ -80,10 +110,11 @@ export function Setup({ onStart, onContinue, onCancel, sound }: SetupProps) {
             </select>
           </label>
         ))}
+        <button type="button" onClick={() => setEditingNames(true)}>Computer names…</button>
         <button
           type="button"
           className="primary"
-          onClick={() => onStart({ name, opponents, seed: Math.floor(Math.random() * 2 ** 31), spectate })}
+          onClick={() => onStart({ name, opponents, seed: Math.floor(Math.random() * 2 ** 31), spectate, computerNames: sanitizeComputerNames(names) })}
         >
           Start game
         </button>
