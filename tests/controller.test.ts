@@ -516,3 +516,24 @@ describe('watching speed', () => {
     expect(loadSpeed(store)).toBe(DEFAULT_SPEED);
   });
 });
+
+describe('hand zoom', () => {
+  it('maps Ctrl/Cmd + - 0 to steps and ignores other keys', async () => {
+    const { zoomKeyDir, stepHandZoom, HAND_ZOOMS, DEFAULT_HAND_ZOOM, loadHandZoom, saveHandZoom } = await import('../src/ui/controller');
+    expect(zoomKeyDir({ key: '=', ctrlKey: true, metaKey: false })).toBe(1);
+    expect(zoomKeyDir({ key: '+', ctrlKey: false, metaKey: true })).toBe(1);
+    expect(zoomKeyDir({ key: '-', ctrlKey: true, metaKey: false })).toBe(-1);
+    expect(zoomKeyDir({ key: '0', ctrlKey: false, metaKey: true })).toBe(0);
+    expect(zoomKeyDir({ key: '-', ctrlKey: false, metaKey: false })).toBeNull();
+    expect(zoomKeyDir({ key: 'a', ctrlKey: true, metaKey: false })).toBeNull();
+    expect(HAND_ZOOMS[DEFAULT_HAND_ZOOM]).toBe(1);
+    expect(stepHandZoom(0, -1)).toBe(0);
+    expect(stepHandZoom(HAND_ZOOMS.length - 1, 1)).toBe(HAND_ZOOMS.length - 1);
+    expect(stepHandZoom(2, 0)).toBe(DEFAULT_HAND_ZOOM);
+    const m = new Map<string, string>();
+    const store = { getItem: (k: string) => m.get(k) ?? null, setItem: (k: string, v: string) => void m.set(k, v) };
+    expect(loadHandZoom(store)).toBe(DEFAULT_HAND_ZOOM);
+    saveHandZoom(2, store);
+    expect(loadHandZoom(store)).toBe(2);
+  });
+});

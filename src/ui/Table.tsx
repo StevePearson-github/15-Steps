@@ -10,6 +10,7 @@ import { Hand, type HandHandle } from './Hand';
 import { fitToWindow, resetFit } from './fit';
 import { type Snapshot, captureCards, getMotionScale, motionAvailable, playMotion } from './motion';
 import {
+  HAND_ZOOMS, loadHandZoom, saveHandZoom, stepHandZoom, zoomKeyDir,
   AVATARS, SORTERS, loadUiOptions, saveUiOptions, sortHandSmart, type Session, type SortDir, type SortKey, arrangeHand, baseChoices, baseFromSelection, canUndo,
   describeSpec, describeStep, humanSeat, seatColor, meldOptions, moveCards, orderForBuild, stagedMeetBase, stepKinds, verb,
 } from './controller';
@@ -62,6 +63,22 @@ export function Table({ session, onAction, onNewGame, onUndo, watch, speed, soun
   const motion = useRef<{ snap: Snapshot | null; prev: GameState | null }>({ snap: null, prev: null });
   const animating = options.animations && motionAvailable();
   motion.current.snap = animating && rootRef.current ? captureCards(rootRef.current) : null;
+  // Ctrl/Cmd + and − zoom only your own hand.
+  const [handZoom, setHandZoom] = useState(() => loadHandZoom());
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const dir = zoomKeyDir(e);
+      if (dir === null) return;
+      e.preventDefault();
+      setHandZoom((z) => stepHandZoom(z, dir));
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+  useLayoutEffect(() => {
+    document.documentElement.style.setProperty('--hand-k', String(HAND_ZOOMS[handZoom]));
+    saveHandZoom(handZoom);
+  }, [handZoom]);
   // Keep the table inside the window (see fit.ts). This runs before the motion effect, so cards are measured at their final size.
   useLayoutEffect(() => fitToWindow());
   useEffect(() => {

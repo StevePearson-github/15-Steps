@@ -567,6 +567,34 @@ export function saveSpeed(index: number, store: Pick<Storage, 'setItem'> | null 
   try { store?.setItem(SPEED_KEY, String(index)); } catch { /* not saved: the speed just resets next time */ }
 }
 
+// ---- Hand zoom (Ctrl/Cmd + and −): only your own cards change size ----
+
+export const HAND_ZOOMS = [0.6, 0.7, 0.8, 0.9, 1, 1.1, 1.2, 1.3] as const;
+export const DEFAULT_HAND_ZOOM = 4; // index of 1×
+export const HAND_ZOOM_KEY = '15steps.handzoom.v1';
+/** One step in or out, staying inside the list. */
+export const stepHandZoom = (index: number, dir: 1 | -1 | 0): number =>
+  dir === 0 ? DEFAULT_HAND_ZOOM : Math.min(HAND_ZOOMS.length - 1, Math.max(0, index + dir));
+/** Which zoom a key press asks for: +1 (Ctrl/Cmd + or =), -1 (Ctrl/Cmd −), 0 (Ctrl/Cmd 0 = reset), or null (not a zoom key). */
+export function zoomKeyDir(e: { key: string; ctrlKey: boolean; metaKey: boolean; altKey?: boolean }): 1 | -1 | 0 | null {
+  if ((!e.ctrlKey && !e.metaKey) || e.altKey) return null;
+  if (e.key === '+' || e.key === '=') return 1;
+  if (e.key === '-' || e.key === '_') return -1;
+  if (e.key === '0') return 0;
+  return null;
+}
+export function loadHandZoom(store: Pick<Storage, 'getItem'> | null = typeof localStorage === 'undefined' ? null : localStorage): number {
+  try {
+    const raw = store?.getItem(HAND_ZOOM_KEY);
+    const n = Number(raw);
+    return raw != null && Number.isInteger(n) && n >= 0 && n < HAND_ZOOMS.length ? n : DEFAULT_HAND_ZOOM;
+  } catch {
+    return DEFAULT_HAND_ZOOM;
+  }
+}
+export function saveHandZoom(index: number, store: Pick<Storage, 'setItem'> | null = typeof localStorage === 'undefined' ? null : localStorage): void {
+  try { store?.setItem(HAND_ZOOM_KEY, String(index)); } catch { /* not saved: the zoom just resets next time */ }
+}
 
 // ---- Sound settings ----
 
