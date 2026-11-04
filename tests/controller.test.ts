@@ -537,3 +537,20 @@ describe('hand zoom', () => {
     expect(loadHandZoom(store)).toBe(2);
   });
 });
+
+describe('computer names', () => {
+  it('uses the saved names, in seat order, and the defaults for the rest', async () => {
+    const { sanitizeComputerNames, loadComputerNames, saveComputerNames } = await import('../src/ui/controller');
+    expect(sanitizeComputerNames(null)).toEqual(['Ada', 'Ben', 'Cleo', 'Dax', 'Eve', 'Finn']);
+    expect(sanitizeComputerNames(['  Max  ', '', 'you', 7, 'A very long name indeed'])).toEqual(['Max', 'Ben', 'Cleo', 'Dax', 'A very long name', 'Finn']);
+    const m = new Map<string, string>();
+    const store = { getItem: (k: string) => m.get(k) ?? null, setItem: (k: string, v: string) => void m.set(k, v) };
+    expect(loadComputerNames(store)[0]).toBe('Ada');
+    saveComputerNames(['Max', 'Zoe'], store);
+    expect(loadComputerNames(store).slice(0, 3)).toEqual(['Max', 'Zoe', 'Cleo']);
+  });
+  it('names the computer seats, and numbers a repeated name', () => {
+    const s = createSession({ name: 'Sam', opponents: ['easy', 'easy', 'easy'], seed: 1, computerNames: ['Max', 'sam', 'Max'] });
+    expect(s.seats.map((x) => x.name)).toEqual(['Sam', 'Max', 'sam 2', 'Max 2']);
+  });
+});

@@ -35,6 +35,8 @@ export interface SetupOptions {
   seed: number;
   /** No human seat: every seat is an AI (opponents). */
   spectate?: boolean;
+  /** The computers' names, in seat order (the saved ones from the names screen). Missing ones use the defaults. */
+  computerNames?: string[];
 }
 
 /** A colour for each seat, used for the dot beside a player's name wherever it appears. */
@@ -43,13 +45,21 @@ export const seatColor = (seat: number): string => SEAT_COLORS[seat % SEAT_COLOR
 /** A little face for each kind of player. */
 export const AVATARS: Record<SeatKind, string> = { human: '🙂', easy: '🐣', medium: '🤖', hard: '🧠' };
 
-const AI_NAMES = ['Ada', 'Ben', 'Cleo', 'Dax', 'Eve', 'Finn'];
+export const DEFAULT_COMPUTER_NAMES = ['Ada', 'Ben', 'Cleo', 'Dax', 'Eve', 'Finn'] as const;
+const AI_NAMES = DEFAULT_COMPUTER_NAMES;
 export const MAX_LOG = 8;
 
 export function createSession(opts: SetupOptions): Session {
   const seats: Seat[] = [];
   if (!opts.spectate) seats.push({ name: opts.name.trim() || 'You', kind: 'human' });
-  opts.opponents.forEach((kind, i) => seats.push({ name: `${AI_NAMES[i % AI_NAMES.length]}`, kind }));
+  opts.opponents.forEach((kind, i) => {
+    const wanted = opts.computerNames?.[i]?.trim() || AI_NAMES[i % AI_NAMES.length] || `Computer ${i + 1}`;
+    // Two players with one name would make the log unreadable, so a repeat gets a number ("Ada 2").
+    const taken = (n: string) => seats.some((s) => s.name.toLowerCase() === n.toLowerCase());
+    let name = wanted;
+    for (let k = 2; taken(name); k++) name = `${wanted} ${k}`;
+    seats.push({ name, kind });
+  });
   const state = createGame({
     playerNames: seats.map((s) => s.name),
     seed: opts.seed,
@@ -482,6 +492,34 @@ export function loadSetupPrefs(store: Store | null = defaultStore()): SetupPrefs
 export function saveSetupPrefs(prefs: SetupPrefs, store: Store | null = defaultStore()): void {
   try {
     store?.setItem(SETUP_PREFS_KEY, JSON.stringify(sanitizeSetup(prefs)));
+  } catch {
+    /* the game still works, it just won't remember */
+  }
+}
+
+// ---- The computers' names: kept across games ----
+
+export const COMPUTER_NAMES_KEY = '15steps.names.v1';
+
+/** Always one name per possible computer seat. A blank name (or "You", which the log uses for the human) goes back to the default. */
+export function sanitizeComputerNames(raw: unknown): string[] {
+  const given = Array.isArray(raw) ? raw : [];
+  return DEFAULT_COMPUTER_NAMES.map((dflt, i) => {
+    const n = typeof given[i] === 'string' ? given[i].trim().slice(0, MAX_NAME_LENGTH) : '';
+    return n === '' || n.toLowerCase() === 'you' ? dflt : n;
+  });
+}
+export function loadComputerNames(store: Store | null = defaultStore()): string[] {
+  try {
+    const text = store?.getItem(COMPUTER_NAMES_KEY);
+    return sanitizeComputerNames(text ? JSON.parse(text) : null);
+  } catch {
+    return sanitizeComputerNames(null);
+  }
+}
+export function saveComputerNames(names: string[], store: Store | null = defaultStore()): void {
+  try {
+    store?.setItem(COMPUTER_NAMES_KEY, JSON.stringify(sanitizeComputerNames(names)));
   } catch {
     /* the game still works, it just won't remember */
   }
