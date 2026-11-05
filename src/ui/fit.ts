@@ -1,3 +1,5 @@
+import { isCompact } from './compact';
+
 /**
  * Keep the whole table on screen without ever changing a card's size.
  *
@@ -21,6 +23,9 @@ const pageOverflows = (): boolean => document.documentElement.scrollHeight > win
 /** If overlapping is not enough, the cards in the melds shrink a little (never below about two thirds), loosest first. */
 const SCALES = [1, 0.9, 0.8, 0.7, 0.62, 0.56];
 
+/** On a phone held sideways (compact.ts) the melds never shrink below this: smaller than that the cards can't be read, so the melds area scrolls instead. */
+const COMPACT_SCALES = [1, 0.9, 0.8, 0.72];
+
 /** Before shrinking the cards another step, the space between melds (and between the owners' groups) tightens: much less visible, and often just enough to keep everything on one row. */
 const GAPS = [1, 0.4];
 
@@ -43,14 +48,16 @@ function fitStepText(): void {
 export function fitToWindow(): void {
   fitStepText();
   const root = document.documentElement.style;
+  const compact = isCompact();
+  const scales = compact ? COMPACT_SCALES : SCALES;
   const tries: [number, number, number][] = [];
-  for (const scale of SCALES) for (const gap of GAPS) for (const overlap of OVERLAPS.slice(0, 4)) tries.push([scale, overlap, gap]);
+  for (const scale of scales) for (const gap of GAPS) for (const overlap of OVERLAPS.slice(0, 4)) tries.push([scale, overlap, gap]);
   // As a last resort, overlap the smallest cards as far as is still readable.
-  for (const overlap of OVERLAPS.slice(4)) tries.push([SCALES[SCALES.length - 1] as number, overlap, GAPS[GAPS.length - 1] as number]);
+  for (const overlap of OVERLAPS.slice(4)) tries.push([scales[scales.length - 1] as number, overlap, GAPS[GAPS.length - 1] as number]);
   // A zoomed-out hand frees room, so the cards on the table may grow past normal (never beyond 1 / hand zoom, nor 1.3×),
   // but only while the melds still keep their full size: growing the table is never worth squeezing the melds.
   const handK = Number(root.getPropertyValue('--hand-k')) || 1;
-  const grow = handK < 1 ? GROW_KS.filter((k) => k <= Math.min(1 / handK, 1.3) + 1e-9) : [];
+  const grow = handK < 1 && !compact ? GROW_KS.filter((k) => k <= Math.min(1 / handK, 1.3) + 1e-9) : [];
   for (const k of grow) {
     root.setProperty('--table-k', String(k));
     for (const overlap of OVERLAPS.slice(0, 4)) {
@@ -60,7 +67,8 @@ export function fitToWindow(): void {
       if (!overflows() && !pageOverflows()) return;
     }
   }
-  for (const k of TABLE_KS) {
+  // (On a phone the whole table never shrinks: what doesn't fit scrolls.)
+  for (const k of compact ? [1] : TABLE_KS) {
     root.setProperty('--table-k', String(k));
     for (const [scale, overlap, gap] of tries) {
       root.setProperty('--meld-overlap', String(-overlap));

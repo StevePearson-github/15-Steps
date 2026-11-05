@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   type Session, aiStep, apply, cardLabel, createSession, describeSpec, describeStep, deserializeSession,
-  DEFAULT_SETUP, SETUP_PREFS_KEY, loadUiOptions, saveUiOptions, sanitizeUiOptions, loadSetupPrefs, saveSetupPrefs, sanitizeSetup, SORTERS, moveCards, verb, arrangeHand, baseChoices, baseFromSelection, canUndo, dropIndex, stepKinds, undo, humanSeat, makePlayers, meldOptions, moveCard, orderForBuild, serializeSession,
+  DEFAULT_SETUP, SETUP_PREFS_KEY, opponentRange, loadUiOptions, saveUiOptions, sanitizeUiOptions, loadSetupPrefs, saveSetupPrefs, sanitizeSetup, SORTERS, moveCards, verb, arrangeHand, baseChoices, baseFromSelection, canUndo, dropIndex, stepKinds, undo, humanSeat, makePlayers, meldOptions, moveCard, orderForBuild, serializeSession,
   sortHand, sortHandByRank, sortHandByRuns, sortHandBySets, sortHandSmart, stagedMeetBase,
 } from '../src/ui/controller';
 import type { Card, MeldSpec } from '../src/engine';
@@ -492,6 +492,11 @@ describe('remembering the new-game settings', () => {
     expect(sanitizeSetup({ opponents: Array(9).fill('easy') }).opponents).toHaveLength(5); // with you: up to 5
     expect(sanitizeSetup({ opponents: Array(9).fill('easy'), spectate: true }).opponents).toHaveLength(6);
     expect(sanitizeSetup({ opponents: ['hard'], spectate: true }).opponents).toEqual(['hard', 'medium']); // watching needs at least 2
+    expect(opponentRange(false)).toEqual({ min: 1, max: 5 });
+    expect(opponentRange(true)).toEqual({ min: 2, max: 6 });
+    // a phone held sideways only has room for 4 players in all
+    expect(opponentRange(false, true)).toEqual({ min: 1, max: 3 });
+    expect(opponentRange(true, true)).toEqual({ min: 2, max: 4 });
   });
 });
 

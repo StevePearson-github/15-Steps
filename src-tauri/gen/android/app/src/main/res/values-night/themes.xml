@@ -1,6 +1,8 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
     <!-- Base application theme. -->
     <style name="Theme.fifteen_steps" parent="Theme.Material3.DayNight.NoActionBar">
-        <!-- Customize your theme here. -->
+        <!-- The table is dark green and fills the whole screen; no white flash while it loads, and no white strip beside the camera cut-out. -->
+        <item name="android:windowBackground">@color/table_background</item>
+        <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
     </style>
 </resources>

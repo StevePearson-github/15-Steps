@@ -454,8 +454,12 @@ export const MAX_NAME_LENGTH = 16;
 
 const LEVELS: readonly Difficulty[] = ['easy', 'medium', 'hard'];
 
-/** How many computer players are allowed: 1 to 5 with you, 2 to 6 when only watching. */
-export const opponentRange = (spectate: boolean) => (spectate ? { min: 2, max: 6 } : { min: 1, max: 5 });
+/**
+ * How many computer players are allowed: 1 to 5 with you, 2 to 6 when only watching.
+ * On a phone held sideways (`compact`) there is only room for 4 players in all, so 1 to 3 with you, 2 to 4 when watching.
+ */
+export const opponentRange = (spectate: boolean, compact = false) =>
+  spectate ? { min: 2, max: compact ? 4 : 6 } : { min: 1, max: compact ? 3 : 5 };
 
 /** Turn whatever was stored into valid settings, falling back to the defaults for anything wrong. */
 export function sanitizeSetup(raw: unknown): SetupPrefs {

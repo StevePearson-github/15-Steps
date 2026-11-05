@@ -30,7 +30,7 @@ Windows needs the WebView2 runtime, which is built into Windows 10/11.
 
 ## Android (in progress)
 
-The Android project is generated into `src-tauri/gen/android` (committed; build output is ignored). Locked to landscape. Not yet done: a phone-sized table layout, touch testing on a real device, a signed release build and a CI job.
+The Android project is generated into `src-tauri/gen/android` (committed; build output is ignored). It is locked to landscape and fullscreen (system bars hidden; a swipe from the edge shows them), with content kept clear of the camera cut-out (`MainActivity.kt`). The phone layout is the "Compact" section at the end of `src/ui/styles.css` (see CLAUDE.md); on a phone there is room for 4 players (3 opponents, or 4 when watching). Tested on a Samsung Galaxy S22 (touch, dragging, dialogs). Not yet done: a signed release build and a CI job.
 
 One-time setup on a Mac (Homebrew):
 ```

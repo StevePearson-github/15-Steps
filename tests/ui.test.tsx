@@ -1843,3 +1843,47 @@ describe('opponents show their step in full, and the table is arranged to fit', 
     expect(focus()).not.toBe('2');
   });
 });
+
+// A phone held sideways: the screen is only about 360 CSS pixels tall (compact.ts), so the table is laid out differently and fewer players fit.
+describe('on a phone held sideways (compact)', () => {
+  const original = Object.getOwnPropertyDescriptor(window, 'matchMedia');
+  beforeEach(() => {
+    Object.defineProperty(window, 'matchMedia', {
+      configurable: true,
+      value: (query: string) => ({ matches: true, media: query, addEventListener: () => {}, removeEventListener: () => {} }),
+    });
+  });
+  afterEach(() => {
+    if (original) Object.defineProperty(window, 'matchMedia', original);
+    else delete (window as unknown as { matchMedia?: unknown }).matchMedia;
+  });
+
+  it('offers at most 3 opponents (4 players), or 4 players when only watching', () => {
+    render(<Setup onStart={() => {}} />);
+    const opponents = screen.getByLabelText('Opponents') as HTMLSelectElement;
+    expect(Array.from(opponents.options).map((o) => o.value)).toEqual(['1', '2', '3']);
+    fireEvent.click(screen.getByLabelText(/Watch the computer players/));
+    const players = screen.getByLabelText('Players') as HTMLSelectElement;
+    expect(Array.from(players.options).map((o) => o.value)).toEqual(['2', '3', '4']);
+  });
+
+  it('trims a remembered game for more players (from a bigger screen) down to what fits', async () => {
+    localStorage.setItem(SETUP_PREFS_KEY, JSON.stringify({ name: 'Sam', opponents: ['easy', 'medium', 'hard', 'easy', 'medium'], spectate: false }));
+    render(<Setup onStart={() => {}} />);
+    await waitFor(() => expect((screen.getByLabelText('Opponents') as HTMLSelectElement).value).toBe('3'));
+    expect(screen.queryByLabelText('Computer 4')).toBeNull();
+    expect((screen.getByLabelText('Computer 1') as HTMLSelectElement).value).toBe('easy'); // the first three keep their levels
+    expect((screen.getByLabelText('Computer 3') as HTMLSelectElement).value).toBe('hard');
+  });
+
+  it('shows every opponent in one small window each, with no carousel', () => {
+    const state = scenario({ phase: 'play', hands: ['3S 4S', '5H 6H 7H', '3C 4C', '9D'], current: 2 });
+    const four = [{ name: 'Sam', kind: 'human' as const }, { name: 'Ada', kind: 'medium' as const }, { name: 'Ben', kind: 'hard' as const }, { name: 'Cleo', kind: 'easy' as const }];
+    render(<Table session={{ state, seats: four, log: [], undoStack: [] }} onAction={() => null} onNewGame={() => {}} />);
+    expect(document.querySelector('.table')?.getAttribute('data-compact')).toBe('1');
+    expect(document.querySelector('.opponents')?.hasAttribute('data-carousel')).toBe(false);
+    expect(document.querySelectorAll('.opponent')).toHaveLength(3);
+    expect(document.querySelectorAll('.opponent.focus, .opponent.side')).toHaveLength(0);
+    expect(document.querySelector('.opponent.active')?.getAttribute('data-seat')).toBe('2'); // whose turn it is is still marked
+  });
+});

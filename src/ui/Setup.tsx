@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { Difficulty } from '../ai/player';
+import { useCompact } from './compact';
 import { SoundControls, type SoundProps } from './SoundControls';
 import {
   DEFAULT_COMPUTER_NAMES, MAX_NAME_LENGTH, type SetupOptions, type SetupPrefs, loadComputerNames, loadSetupPrefs, opponentRange, sanitizeComputerNames, saveComputerNames, saveSetupPrefs,
@@ -19,7 +20,9 @@ export function Setup({ onStart, onContinue, onCancel, sound }: SetupProps) {
   // Start from whatever was used last time (a 2-player game against Medium the first time).
   const [prefs, setPrefs] = useState<SetupPrefs>(() => loadSetupPrefs());
   const { name, opponents, spectate } = prefs;
-  const { min, max } = opponentRange(spectate);
+  // A phone held sideways has room for fewer players (see opponentRange).
+  const compact = useCompact();
+  const { min, max } = opponentRange(spectate, compact);
   // The computers' names have a screen of their own; like everything here they are remembered as they are typed.
   const [names, setNames] = useState<string[]>(() => loadComputerNames());
   const [editingNames, setEditingNames] = useState(false);
@@ -30,6 +33,10 @@ export function Setup({ onStart, onContinue, onCancel, sound }: SetupProps) {
 
   const setCount = (n: number, from: SetupPrefs = prefs) =>
     setPrefs({ ...from, opponents: Array.from({ length: n }, (_, i) => from.opponents[i] ?? 'medium') });
+  // Settings remembered from a bigger screen (or before the phone was turned sideways) may name more players than fit.
+  useEffect(() => {
+    if (opponents.length > max) setCount(max);
+  }, [opponents.length, max]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (editingNames) {
     return (
@@ -77,7 +84,7 @@ export function Setup({ onStart, onContinue, onCancel, sound }: SetupProps) {
             checked={spectate}
             onChange={(e) => {
               const next = { ...prefs, spectate: e.target.checked };
-              const range = opponentRange(e.target.checked);
+              const range = opponentRange(e.target.checked, compact);
               setCount(Math.min(Math.max(opponents.length, range.min), range.max), next);
             }}
           />{' '}
