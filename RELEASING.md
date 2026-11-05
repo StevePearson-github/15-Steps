@@ -28,6 +28,19 @@ Signing needs an Apple Developer account and a Windows code-signing certificate;
 
 Windows needs the WebView2 runtime, which is built into Windows 10/11.
 
-## Android (planned)
+## Android (in progress)
 
-The desktop apps are [Tauri 2](https://tauri.app) shells around the web UI, and Tauri 2 also builds Android from the same code (`src-tauri/src/lib.rs` is already laid out for it). Steps when we get there: install the Android SDK/NDK and Rust, run `npm run tauri android init`, make the table layout work on a phone-sized screen, then add an Android job to `release.yml` that attaches a signed `.apk`.
+The Android project is generated into `src-tauri/gen/android` (committed; build output is ignored). It is locked to landscape and fullscreen (system bars hidden; a swipe from the edge shows them), with content kept clear of the camera cut-out (`MainActivity.kt`). The phone layout is the "Compact" section at the end of `src/ui/styles.css` (see CLAUDE.md); on a phone there is room for 4 players (3 opponents, or 4 when watching). Tested on a Samsung Galaxy S22 (touch, dragging, dialogs). Not yet done: a signed release build and a CI job.
+
+One-time setup on a Mac (Homebrew):
+```
+brew install --cask temurin@17 android-commandlinetools
+export JAVA_HOME=$(/usr/libexec/java_home -v 17)
+export ANDROID_HOME=/opt/homebrew/share/android-commandlinetools
+sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.0.0" "ndk;28.2.13676358"
+export NDK_HOME=$ANDROID_HOME/ndk/28.2.13676358
+rustup target add aarch64-linux-android armv7-linux-androideabi i686-linux-android x86_64-linux-android
+```
+(With Homebrew's `rustup`, also put `/opt/homebrew/opt/rustup/bin` on your PATH.)
+
+Build a debug APK: `npm run tauri android build -- --debug --apk --target aarch64`, then `adb install` the file under `src-tauri/gen/android/app/build/outputs/apk/`. Live on a connected phone: `npm run tauri android dev`.

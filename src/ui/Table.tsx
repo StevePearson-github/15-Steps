@@ -7,6 +7,7 @@ import { CardView } from './CardView';
 import { ContextMenu } from './ContextMenu';
 import { SoundControls, type SoundProps } from './SoundControls';
 import { Hand, type HandHandle } from './Hand';
+import { isCompact, useCompact } from './compact';
 import { fitToWindow, resetFit } from './fit';
 import { type Snapshot, captureCards, getMotionScale, motionAvailable, playMotion } from './motion';
 import {
@@ -95,8 +96,11 @@ export function Table({ session, onAction, onNewGame, onUndo, watch, speed, soun
   });
   const [logOpen, setLogOpen] = useState(true);
   // Watching computers play: their hands are shown face-up unless you switch that off.
-  const [showCards, setShowCards] = useState(true);
+  // (On a phone the little face-up cards are too small to read, so they start hidden there.)
+  const [showCards, setShowCards] = useState(() => !isCompact());
   const watching = me < 0;
+  // A phone held sideways: a tighter layout, and no carousel (every opponent gets the same small window).
+  const compact = useCompact();
   const playing = state.phase === 'draw' || state.phase === 'play';
   // The other players, in the order they take their turns after you (everyone, in seat order, when watching).
   const playerOrder = watching
@@ -104,7 +108,7 @@ export function Table({ session, onAction, onNewGame, onUndo, watch, speed, soun
     : Array.from({ length: state.players.length - 1 }, (_, k) => (me + 1 + k) % state.players.length);
   // Carousel: with several opponents, the one whose turn it is (or who just played, when it is your turn) is shown large in the middle,
   // with the others smaller to the left and right in turn order. Clicking a smaller one brings it to the middle until the turn moves on.
-  const carousel = playerOrder.length >= 2;
+  const carousel = playerOrder.length >= 2 && !compact;
   const [pinned, setPinned] = useState<number | null>(null);
   useEffect(() => setPinned(null), [state.current]);
   const natural = playerOrder.includes(state.current) ? state.current : (playerOrder[playerOrder.length - 1] as number);
@@ -303,6 +307,7 @@ export function Table({ session, onAction, onNewGame, onUndo, watch, speed, soun
     <div className="frame" ref={rootRef}>
     <div
       className="table"
+      data-compact={compact ? 1 : undefined}
       onPointerDown={(e) => {
         // A pop-up message (like "No base to suggest yet.") goes away at the next click anywhere.
         setMessage((m) => (m ? '' : m));
@@ -350,9 +355,9 @@ export function Table({ session, onAction, onNewGame, onUndo, watch, speed, soun
           Step
         </button>
         <label>
-          <input type="checkbox" checked={showCards} onChange={(e) => setShowCards(e.target.checked)} /> Show the computers’ cards
+          <input type="checkbox" checked={showCards} onChange={(e) => setShowCards(e.target.checked)} /> <span className="wb-text">Show the computers’ cards</span>
         </label>
-        <button type="button" onClick={onNewGame}>Stop game</button>
+        <button type="button" className="wb-stop" onClick={onNewGame}>Stop game</button>
       </section>
     )}
         <div className="topbar-right">
@@ -596,7 +601,7 @@ export function Table({ session, onAction, onNewGame, onUndo, watch, speed, soun
         <div className="overlay" onClick={() => setShowOptions(false)}>
           <div className="dialog options-card" role="dialog" aria-label="Options" onClick={(e) => e.stopPropagation()}>
             <h2>Options</h2>
-            <label className="option-row">
+            <label className="option-row opt-activity">
               <input
                 type="checkbox"
                 checked={options.showActivity}

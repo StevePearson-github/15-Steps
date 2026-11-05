@@ -682,3 +682,134 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
   .tagline { margin: 2px 0 12px; }
   .setup fieldset { gap: 10px; margin-top: 14px; padding: 14px 20px 16px; }
 }
+
+/* ==========================================================================
+   Compact: a phone held sideways (about 360 to 420 CSS pixels tall, 640 to 920 wide)
+   --------------------------------------------------------------------------
+   One screen, no scrolling: a thin score/menu bar, one small window per opponent in a single row, the piles and melds,
+   and your hand with its buttons. Everything here is gated by the height, so no desktop window (never this short) changes.
+   Table.tsx sets data-compact (and turns the opponents carousel off) under the same query (compact.ts).
+   The selectors start with `.frame .table[data-compact]` so they beat the desktop rules above whatever their specificity.
+   ========================================================================== */
+@media (max-height: 520px) {
+  :root {
+    --card-base: clamp(40px, 14vh, 60px);
+    --pile-w: calc(var(--card-w) * 0.95);
+  }
+  html { font-size: 12px; overscroll-behavior: none; }
+  body { -webkit-tap-highlight-color: transparent; }
+  button { touch-action: manipulation; }
+
+  .frame {
+    margin: 0; border-radius: 0; height: 100vh; padding: 4px;
+    padding-left: max(4px, env(safe-area-inset-left)); padding-right: max(4px, env(safe-area-inset-right));
+    padding-top: max(4px, env(safe-area-inset-top)); padding-bottom: max(4px, env(safe-area-inset-bottom));
+    box-shadow: none;
+  }
+  .frame .table[data-compact] {
+    gap: 4px; padding: 4px 8px 5px; border-radius: 14px;
+    box-shadow: inset 0 0 0 2px var(--wood-dark), inset 0 0 40px rgba(0, 0, 0, 0.45);
+  }
+  .frame .table[data-compact] button:not(.card):not(.link):not(.log-toggle):not(.sort-btn):not([role='menuitem']) {
+    border-width: 2px; padding: 0.2em 0.7em; box-shadow: 0 2px 0 var(--ink); min-height: 26px;
+  }
+
+  /* -- Top bar: round and scores on the left, the menu buttons on the right -- */
+  .frame .table[data-compact] .topbar { gap: 3px 6px; align-items: center; flex-wrap: wrap; padding-left: 0; }
+  /* Watching: the controls share the bar; the label shrinks to "Cards" and the Stop button (the bar's own one does the same job) goes. */
+  .frame .table[data-compact] .topbar .watch-bar { margin: 0 auto 0 0; gap: 6px; padding: 2px 6px; font-size: 0.85rem; }
+  .frame .table[data-compact] .topbar .watch-bar button { font-size: 0.85rem; padding: 0.1em 0.6em; min-height: 22px; }
+  .frame .table[data-compact] .wb-text { font-size: 0; }
+  .frame .table[data-compact] .wb-text::after { content: 'Cards'; font-size: 0.85rem; }
+  .frame .table[data-compact] .wb-stop { display: none; }
+  .frame .table[data-compact] .logo, .frame .table[data-compact] .sb-note, .frame .table[data-compact] .sb-step { display: none; }
+  .frame .table[data-compact] .scoreboard {
+    display: flex; align-items: center; gap: 4px 10px; margin: 0; padding: 2px 10px; min-width: 0; min-height: 26px; border-radius: 13px; font-size: 0.9rem;
+    position: static; width: auto; overflow: hidden;
+  }
+  .frame .table[data-compact] .scoreboard strong { display: inline; margin: 0; font-size: 0.95rem; white-space: nowrap; }
+  .frame .table[data-compact] .scoreboard ul { display: flex; gap: 2px 10px; flex-wrap: nowrap; }
+  .frame .table[data-compact] .scoreboard li { display: flex; grid-column: auto; gap: 4px; white-space: nowrap; }
+  .frame .table[data-compact] .scoreboard .sb-name { max-width: 6.5em; overflow: hidden; text-overflow: ellipsis; }
+  .frame .table[data-compact] .topbar-buttons { gap: 5px; }
+  .frame .table[data-compact] .speed { padding: 1px 3px; font-size: 0.85rem; }
+  .frame .table[data-compact] .speed-title { display: none; }
+  .frame .table[data-compact] .speed .arrow { padding: 0.1em 0.5em; min-height: 22px; }
+  .frame .table[data-compact] .speed-label { min-width: 2.4em; }
+  .frame .table[data-compact] .topbar .status-pill { font-size: 0.9rem; padding: 3px 12px; }
+
+  /* -- The other players: one thin window each (name, step, and the card count), side by side, all the same size.
+        The fan of card backs is left out: the count says the same and the room goes to the table. -- */
+  .frame .table[data-compact] .opponents { flex-wrap: nowrap; gap: 5px; margin: 0; padding: 0; justify-content: stretch; }
+  .frame .table[data-compact] .opponent {
+    flex: 1 1 0; min-width: 0; max-width: none; margin: 0; padding: 3px 8px; border-radius: 12px; border-width: 2px; transform: none; opacity: 0.85;
+    display: grid; grid-template-columns: auto auto minmax(0, 1fr); grid-template-rows: auto; gap: 2px 5px; align-items: center; justify-content: stretch;
+  }
+  .frame .table[data-compact] .opponent.active { opacity: 1; transform: none; box-shadow: 0 0 12px rgba(255, 210, 63, 0.55), inset 0 0 0 1.5px rgba(255, 255, 255, 0.1); }
+  .frame .table[data-compact] .opp-bar { display: contents; }
+  .frame .table[data-compact] .opponent .tab { position: static; font-size: 0.85rem; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+  .frame .table[data-compact] .pill { border-width: 2px; padding: 0 0.55em 0 0.4em; box-shadow: 0 1px 0 var(--ink); }
+  .frame .table[data-compact] .opponent .step-pill { font-size: calc(0.85rem * var(--pill-k, 1)); }
+  .frame .table[data-compact] .opponent .tab small, .frame .table[data-compact] .opponent .tab .avatar,
+  .frame .table[data-compact] .opponent .pd, .frame .table[data-compact] .opponent .bd-text, .frame .table[data-compact] .opp-desc, .frame .table[data-compact] .turn-flag,
+  .frame .table[data-compact] .back-fan { display: none; }
+  .frame .table[data-compact] .opp-meta { margin: 0; font-size: 0.85rem; white-space: nowrap; gap: 0; justify-self: end; }
+  /* Watching with the computers' cards showing: those get a second line (small, overlapped). */
+  .frame .table[data-compact] .opponent:has(.reveal-hand) { grid-template-rows: auto auto; }
+  .frame .table[data-compact] .reveal-hand { grid-column: 1 / -1; --small-w: 22px; --small-h: calc(var(--small-w) * 1.414); margin: 0; padding-left: 11px; flex-wrap: nowrap; }
+  .frame .table[data-compact] .reveal-hand .card { margin-left: -11px; }
+
+  /* -- The middle: the piles, then the melds -- */
+  .frame .table[data-compact] .center { min-height: 0; padding: 0; gap: 0; }
+  .frame .table[data-compact] .board { flex-wrap: nowrap; gap: 8px 14px; }
+  .frame .table[data-compact] .piles { gap: 12px; }
+  .frame .table[data-compact] .caption { margin-top: 3px; font-size: 0.62rem; letter-spacing: 0.1em; }
+  .frame .table[data-compact] .melds { --small-w: calc(var(--card-w) * 0.8 * var(--meld-scale, 1)); --small-h: calc(var(--small-w) * 1.414); padding: 2px 4px 14px; gap: 6px 8px; }
+  .frame .table[data-compact] .slot-hint { padding: 8px 14px; border-width: 2px; border-radius: 14px; font-size: 0.9rem; }
+  .frame .table[data-compact] .meld { padding: 3px 4px 4px; border-radius: 9px; }
+  .frame .table[data-compact] .meld-row { gap: 6px; }
+  .frame .table[data-compact] .owner-melds .owner { font-size: 0.62rem; margin: 0 0 2px 3px; }
+  .frame .table[data-compact] .meld-actions { bottom: -12px; }
+  .frame .table[data-compact] .meld-actions button:not(.card) { font-size: 0.75rem; min-height: 20px; padding: 0 0.6em; }
+  .frame .table[data-compact] .notice { font-size: 0.8rem; padding: 1px 10px; }
+
+  /* -- Your window: name and step on one line with the turn message, then the cards, then one row of buttons -- */
+  .frame .table[data-compact] .bottom { display: block; margin-top: auto; }
+  .frame .table[data-compact] .bottom .log { display: none; }
+  .frame .table[data-compact] .bottom .mine { max-width: none; width: 100%; }
+  .frame .table[data-compact] .mine {
+    display: grid; grid-template-columns: auto auto minmax(0, 1fr); gap: 3px 6px; padding: 3px 8px 4px; border-radius: 14px; border-width: 2px; align-items: center;
+  }
+  .frame .table[data-compact] .mine > .tab { position: static; grid-column: 1; grid-row: 1; font-size: 0.85rem; }
+  .frame .table[data-compact] .mine-step { position: static; grid-column: 2; grid-row: 1; font-size: 0.85rem; }
+  .frame .table[data-compact] .goal { grid-column: 3; grid-row: 1; height: auto; min-height: 0; font-size: 0.9rem; gap: 2px 10px; min-width: 0; }
+  .frame .table[data-compact] .goal .tip { display: none; }
+  .frame .table[data-compact] .goal .status-pill.in-hand { position: static; transform: none; margin: 0 0 0 auto; max-width: none; padding: 0 12px; font-size: 0.9rem; }
+  .frame .table[data-compact] .goal .staging:has(.hint) { display: none; } /* the long "select all your base cards…" help doesn't fit; the buttons say it */
+  .frame .table[data-compact] .opt-activity { display: none; } /* the activity window is not shown on a phone */
+  .frame .table[data-compact] .goal .add-hint { font-size: 0.8rem; padding: 0 8px; border-width: 1.5px; }
+  .frame .table[data-compact] .hand { grid-column: 1 / -1; }
+  .frame .table[data-compact] .controls { grid-column: 1 / -1; flex-wrap: nowrap; gap: 6px; }
+  .frame .table[data-compact] .actions { flex-wrap: nowrap; gap: 5px; }
+  .frame .table[data-compact] .actions button { font-size: 0.85rem; white-space: nowrap; }
+  .frame .table[data-compact] .sort-row { flex-wrap: nowrap; gap: 4px; }
+  .frame .table[data-compact] .sort-label { display: none; }
+  .frame .table[data-compact] .sort-btn { font-size: 0.8rem; padding: 0.2em 0.6em; border-width: 2px; min-height: 24px; }
+  .frame .table[data-compact] .mine .error { top: -10px; }
+
+  /* -- Pop-ups -- */
+  .overlay { padding: 8px; }
+  .dialog { max-height: 96vh; padding: 10px 16px; gap: 6px; border-radius: 18px; }
+  .steps-card { min-width: min(96vw, 640px); }
+  .steps-card .hint { display: none; }
+  .steps-list { grid-template-columns: 1fr 1fr; gap: 2px 14px; }
+  .steps-list li { padding: 1px 8px; }
+
+  /* -- The new-game screen, in two columns -- */
+  .setup { max-width: 640px; margin: 6px auto; }
+  .setup h1 { font-size: 2.2rem; }
+  .tagline { margin: 0 0 6px; }
+  .setup fieldset { grid-template-columns: 1fr 1fr; gap: 8px 22px; margin-top: 8px; padding: 10px 16px 12px; border-width: 2px; border-radius: 16px; }
+  .setup fieldset > label:first-of-type { justify-content: flex-start; }
+  .setup fieldset > button, .setup fieldset > label:first-of-type, .setup fieldset > .sound-controls { grid-column: 1 / -1; }
+}
