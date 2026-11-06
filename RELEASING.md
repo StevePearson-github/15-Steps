@@ -41,11 +41,15 @@ Gradle (`app/build.gradle.kts`) signs the release build when it finds a key, fro
 - **Your machine:** copy the properties file to `src-tauri/gen/android/keystore.properties` (git-ignored).
 - **CI:** four repository secrets (Settings → Secrets and variables → Actions):
   ```
-  gh secret set ANDROID_KEYSTORE_BASE64 < <(base64 -i ~/.android-keys/15-steps-release.jks)
-  gh secret set ANDROID_KEYSTORE_PASSWORD   # storePassword from the properties file
-  gh secret set ANDROID_KEY_ALIAS           # fifteensteps
-  gh secret set ANDROID_KEY_PASSWORD        # keyPassword from the properties file
+  P=~/.android-keys/15-steps-keystore.properties
+  get() { sed -n "s/^$1=//p" "$P"; }
+  gh secret set ANDROID_KEYSTORE_BASE64   --body "$(base64 -i ~/.android-keys/15-steps-release.jks)"
+  gh secret set ANDROID_KEYSTORE_PASSWORD --body "$(get storePassword)"
+  gh secret set ANDROID_KEY_ALIAS         --body "$(get keyAlias)"
+  gh secret set ANDROID_KEY_PASSWORD      --body "$(get keyPassword)"
+  gh secret list
   ```
+  (`--body` gives each value on the command line; without it `gh secret set` waits for you to type the value, which swallows the following pasted lines.)
 The **Release** workflow's `android` job decodes the key on a tag push, builds, checks the signature with `apksigner verify`, and attaches `15-Steps-X-android.apk`. On a dry run (no tag) it builds an unsigned APK and attaches nothing. A tag build fails if the secrets are missing.
 
 The version code is derived from the version in `tauri.conf.json`/`package.json` (1.1.0 → 1001000), so each release bump is automatically an upgrade.
