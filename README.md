@@ -16,13 +16,13 @@ Get the latest build from the [Releases page](../../releases/latest).
 | **Windows**, standalone | `15-Steps-<version>-windows-portable.exe` | One file. No install: download it and double-click. |
 | **Windows**, installer | `15-Steps-<version>-windows-setup.exe` | Installs like a normal app, with a Start menu entry. |
 | **Source** | `15-Steps-<version>-source.zip` | Or clone this repository. |
-| **Android** | _planned_ | |
+| **Android** (64-bit phones, Android 7+) | `15-Steps-<version>-android.apk` | Download it on the phone and open it; Android asks once to allow installs from your browser or Files app. Made for a phone held sideways, with up to 4 players. |
 
 `SHA256SUMS.txt` on each release lists checksums for the files.
 
 ### First launch: unsigned app warnings
 
-The apps are not code-signed yet, so your computer will warn you the first time.
+The Mac and Windows apps are not code-signed yet, so your computer will warn you the first time.
 
 - **Mac:** right-click the app and choose **Open** (once), or go to System Settings → Privacy & Security → **Open Anyway**.
 - **Windows:** SmartScreen says "Windows protected your PC". Click **More info**, then **Run anyway**.
@@ -91,7 +91,8 @@ See [DESIGN.md](DESIGN.md) for the design decisions, the visual design system an
 
 ## Roadmap
 
-- Linux and Android versions
+- A Linux version
+- Android on the Play Store (for now the APK is a direct download)
 - Deck and table themes
 - Online multiplayer
 
